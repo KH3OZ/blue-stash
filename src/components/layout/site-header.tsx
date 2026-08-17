@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Archive, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function SiteHeader() {
   return (
@@ -29,7 +30,9 @@ export function SiteHeader() {
           />
         </div>
 
-        <Button className="ml-auto gap-1.5 shrink-0 transition-colors hover:bg-primary-hover">
+        <ThemeToggle />
+
+        <Button className="shrink-0 gap-1.5 transition-colors hover:bg-primary-hover">
           <Plus className="size-4" aria-hidden="true" />
           <span className="hidden sm:inline">Add Stash</span>
         </Button>
