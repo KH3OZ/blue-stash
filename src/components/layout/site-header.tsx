@@ -29,7 +29,7 @@ export function SiteHeader() {
           />
         </div>
 
-        <Button className="ml-auto gap-1.5 shrink-0 transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-glow">
+        <Button className="ml-auto gap-1.5 shrink-0 transition-colors hover:bg-primary-hover">
           <Plus className="size-4" aria-hidden="true" />
           <span className="hidden sm:inline">Add Stash</span>
         </Button>

@@ -5,6 +5,6 @@ export default function Home() {
       <p className="mt-1 text-sm text-muted-foreground">
         Entries you add will show up here.
       </p>
-    </div>
+    </div>  
   );
 }

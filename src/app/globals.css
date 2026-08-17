@@ -40,7 +40,6 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-primary-hover: var(--primary-hover);
-  --shadow-glow: var(--glow-shadow);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -95,7 +94,6 @@
   --primary: #2e7cf6;
   --primary-foreground: #f8fafc;
   --primary-hover: #4f8cff;
-  --glow-shadow: 0 0 24px 0 rgb(79 140 255 / 0.35);
   --secondary: #7dd3fc;
   --secondary-foreground: #0a0e1a;
   --muted: #1a2438;
@@ -130,5 +128,15 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
   }
 }

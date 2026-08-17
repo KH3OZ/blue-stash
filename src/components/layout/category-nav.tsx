@@ -31,7 +31,7 @@ export function CategoryNav() {
       aria-label="Filter by category"
       className="border-b border-border bg-background"
     >
-      <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6">
+      <div className="scrollbar-hidden mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6">
         {FILTERS.map((filter) => {
           const Icon = iconFor(filter);
           const isActive = active === filter;
@@ -54,7 +54,7 @@ export function CategoryNav() {
               {isActive && (
                 <motion.span
                   layoutId="category-nav-active"
-                  className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-secondary shadow-[0_0_8px_0_var(--secondary)]"
+                  className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-secondary"
                   transition={{ type: "spring", stiffness: 500, damping: 35 }}
                 />
               )}
