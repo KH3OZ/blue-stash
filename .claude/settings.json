@@ -1,0 +1,12 @@
+{
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "supabase@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes @swarmclawai/andrej-karpathy-skills *)",
+      "Bash(npx --yes impeccable *)"
+    ]
+  }
+}
