@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
 import { cn } from "@/lib/utils";
+import { useCategoryFilter } from "@/context/category-filter-context";
 import {
   Sidebar,
   SidebarContent,
@@ -35,7 +34,7 @@ function iconFor(filter: NavFilter) {
 }
 
 export function AppSidebar() {
-  const [active, setActive] = useState<NavFilter>("ALL");
+  const { activeFilter: active, setActiveFilter: setActive } = useCategoryFilter();
 
   return (
     <TooltipProvider>

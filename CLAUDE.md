@@ -120,27 +120,39 @@ conventions before writing code — don't re-derive decisions already made below
   config file, stop — you're in the wrong place.
 - **No `app-shell.tsx` component.** Header + sidebar + main composition lives directly
   inside `src/app/layout.tsx`. Don't create or look for a separate shell component.
-- **Category filtering is currently local `useState`**, not a URL query param, living
-  inside the sidebar component (`src/components/layout/app-sidebar.tsx`). This means the
-  grid (Phase 3+) cannot read the sidebar's selection without the state being lifted —
-  check current phase status before assuming this is fixed.
+- **Category filtering lives in React Context**, not a URL query param —
+  `src/context/category-filter-context.tsx` (`CategoryFilterProvider` +
+  `useCategoryFilter()`), provided in `src/app/layout.tsx` alongside `SidebarProvider`.
+  The sidebar (`src/components/layout/app-sidebar.tsx`) reads/writes it via the hook; the
+  grid (Phase 3.3) can consume the same hook once built.
 - **Category source of truth:** `src/types/category.ts` — exports `Category` type,
   `CATEGORIES`, `CATEGORY_LABELS`, `CATEGORY_ICONS`, and `NavFilter` /
   `ALL_FILTER_*`. Always import from here rather than redefining category lists.
 
-**Key files (as of Phase 2 completion):**
+**Key files (as of Phase 2 + in-progress Phase 3):**
 - `src/app/layout.tsx` — full shell composition, `SidebarProvider`, cookie-based sidebar
   state read server-side (no flash)
 - `src/app/page.tsx` — homepage, wires in the composer
 - `src/app/globals.css` — all design tokens (light + dark), `--sidebar-*` tokens
+- `src/context/category-filter-context.tsx` — `CategoryFilterProvider` +
+  `useCategoryFilter()`, shared category-selection state (see §7)
 - `src/components/layout/site-header.tsx` — header, includes `SidebarTrigger`
 - `src/components/layout/app-sidebar.tsx` — shadcn `Sidebar`, "All" + 5 categories,
   tooltips when collapsed, collapses to icon-only rail (not full hide)
 - `src/components/home/stash-composer.tsx` — homepage empty-state hero: headline
-  "What's worth keeping?", rounded-3xl composer card, 5 category chips that toggle
-  selection and swap placeholder text
+  "What's worth keeping?", rounded-3xl composer card. No category-selection UI (removed
+  in an earlier session).
 - `src/components/ui/sidebar.tsx` — shadcn primitive, offset to start below the 64px header
 - `src/hooks/use-mobile.ts` — mobile breakpoint hook
+- `src/types/view-mode.ts` — `ViewMode = "polaroid" | "timeline"` (2 modes; Editorial was
+  built then removed), `DEFAULT_VIEW_MODE = "polaroid"`
+- `src/components/stash/stash-collection.tsx` — owns view-mode state (local, unpersisted),
+  renders the switcher + either the polaroid grid or the timeline list
+- `src/components/stash/stash-card-polaroid.tsx` — default card: tilted photo, corner pin,
+  tag-chip category label
+- `src/components/stash/stash-timeline-row.tsx` — flat row layout (not a grid tile), used
+  only in Timeline mode
+- `src/components/stash/stash-view-switcher.tsx` — 2-icon toggle group (Polaroid, Timeline)
 
 ### 8. Design System — Current Tokens
 
@@ -164,13 +176,23 @@ this was deliberately removed from the Add Stash button, logo, and active nav pi
 - Corners: `rounded-xl`
 - Card motion: subtle hover-lift only (`translate-y` + soft shadow) — no glow
 
-**⚠️ Accessibility guardrail:** the highlight/accent color (`#DB8A3C` light /
-`#7DD3FC` dark) **fails WCAG AA as text** on white/card backgrounds (~2.72:1 contrast).
-Use it for icons, borders, and accents only. Rely on components' built-in bold-text
-active styles for anything that needs to pass contrast as text. For a solid
-highlight-colored surface (e.g. tag chips), pair `--highlight` as the background with
-`--highlight-foreground` (`#2A2130`, both themes) as the text color — verified ≥5.6:1 in
-light and ≥9:1 in dark, both above AA.
+**⚠️ Accessibility guardrail:** any accent color used as text must use the solid-background
++ matching `-foreground` pairing (e.g. `bg-highlight` + `text-highlight-foreground`) — a
+light tint of an accent color as its own text color (e.g. `bg-highlight/10` +
+`text-highlight`) is **not presumed safe in this app** and must be verified with an actual
+contrast calculation before use, not eyeballed. Two concrete findings so far:
+
+- **Highlight** (`#DB8A3C` light / `#7DD3FC` dark): tint-as-text fails (~2.72:1). Fix
+  exists and is verified — pair `--highlight` as the background with
+  `--highlight-foreground` (`#2A2130`, both themes): ≥5.6:1 light, ≥9:1 dark, both above AA.
+- **Primary** (`rgb(48,127,238)` light / `#2E7CF6` dark): tint-as-text also fails
+  (~3.46:1 light, ~3.50:1 dark). Unlike highlight, **the solid-background fix does not
+  save it either** — `bg-primary` + `text-primary-foreground` only reaches ~3.89:1 light /
+  ~3.77:1 dark, still short of the 4.5:1 text threshold. This pairing is already used
+  elsewhere in the app (Add Stash button, view-switcher active state) as UI-element
+  fill/label, not as small standalone text — treat any *new* small-text-on-primary use
+  as unresolved until a dedicated fix (e.g. a darker text-only primary variant) exists.
+  Don't assume `bg-primary` + `text-primary-foreground` is safe by analogy to highlight.
 
 > Note: `BlueStash_Project_Proposal.md` §7 has a stale palette table (v1.1) — the table
 > above is current. The proposal doc flags this itself; this file is the source of truth
@@ -195,9 +217,12 @@ light and ≥9:1 in dark, both above AA.
 
 - **Phase 1** (Supabase schema + Prisma models) — complete
 - **Phase 2** (UI shell) — complete: header, sidebar, homepage composer, theming, verified
-- **Phase 3** (StashCard + grid) — in progress. Sub-tasks: 3.1 StashCard component →
-  3.2 lift category-filter state out of the sidebar into shared state → 3.3 grid +
-  Supabase data fetching, filtered by 3.2's shared state.
+- **Phase 3** (StashCard + grid) — in progress. Sub-tasks: 3.1 card display — grew from a
+  single card component into a 2-mode view system (`StashCollection` + switcher: Polaroid
+  default, Timeline; Editorial was explored then removed) → 3.2 lift category-filter
+  state out of the sidebar into shared Context (`CategoryFilterProvider` /
+  `useCategoryFilter()`) — done, not yet consumed by a grid → 3.3 grid + Supabase data
+  fetching, filtered by 3.2's shared state.
 
 For full phase list (4: entry creation, 5: Smart Capture, 6: filtering/search), see
 `BlueStash_Project_Proposal.md` §8.

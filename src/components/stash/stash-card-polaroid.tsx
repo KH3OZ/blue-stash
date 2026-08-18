@@ -68,7 +68,7 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
       </div>
 
       <div className="flex flex-col items-center gap-1 pt-3 text-center">
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-primary uppercase">
+        <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium tracking-wide text-primary-foreground uppercase">
           {CATEGORY_LABELS[category]}
         </span>
 
