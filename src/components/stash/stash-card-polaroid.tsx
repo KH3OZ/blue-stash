@@ -28,10 +28,18 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
   return (
     <article
       className={cn(
-        "bg-card p-3 pb-4 shadow-md transition-transform duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-xl dark:shadow-black/30",
+        "relative bg-card p-3 pb-4 shadow-md transition-transform duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-xl dark:shadow-black/30",
         tilt
       )}
     >
+      <div
+        aria-hidden="true"
+        className="absolute -top-1.5 -left-1.5 z-10 flex rotate-45 flex-col items-center drop-shadow-sm"
+      >
+        <span className="size-2.5 rounded-full bg-primary" />
+        <span className="h-2.5 w-0.5 bg-primary/80" />
+      </div>
+
       <div className="relative aspect-square w-full overflow-hidden bg-foreground/5">
         {entry.coverUrl ? (
           <img
@@ -60,7 +68,7 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
       </div>
 
       <div className="flex flex-col items-center gap-1 pt-3 text-center">
-        <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-primary uppercase">
           {CATEGORY_LABELS[category]}
         </span>
 

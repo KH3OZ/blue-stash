@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { StashCard } from "@/components/stash/stash-card";
 import { StashCardPolaroid } from "@/components/stash/stash-card-polaroid";
 import { StashTimelineRow } from "@/components/stash/stash-timeline-row";
 import { StashViewSwitcher } from "@/components/stash/stash-view-switcher";
@@ -30,13 +29,9 @@ export function StashCollection({ entries }: StashCollectionProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-          {entries.map((entry, index) =>
-            viewMode === "polaroid" ? (
-              <StashCardPolaroid key={entry.id} entry={entry} index={index} />
-            ) : (
-              <StashCard key={entry.id} entry={entry} />
-            )
-          )}
+          {entries.map((entry, index) => (
+            <StashCardPolaroid key={entry.id} entry={entry} index={index} />
+          ))}
         </div>
       )}
     </div>
