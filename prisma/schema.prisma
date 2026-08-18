@@ -18,6 +18,8 @@ enum Category {
   GAMING
   AUDIO
   LIFE_MOMENTS
+  EVENTS
+  FILMS
 }
 
 model Entry {
