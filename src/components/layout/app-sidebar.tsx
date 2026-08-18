@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -39,11 +40,11 @@ export function AppSidebar() {
   return (
     <TooltipProvider>
       <Sidebar collapsible="icon">
-        <SidebarHeader>
+        <SidebarHeader className="pl-3">
           <SidebarTrigger className="text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
+          <SidebarGroup className="pl-3">
             <SidebarGroupContent>
               <SidebarMenu>
                 {FILTERS.map((filter) => {
@@ -58,7 +59,10 @@ export function AppSidebar() {
                         tooltip={labelFor(filter)}
                         onClick={() => setActive(filter)}
                       >
-                        <Icon aria-hidden="true" />
+                        <Icon
+                          aria-hidden="true"
+                          className={cn(isActive && "text-primary")}
+                        />
                         <span>{labelFor(filter)}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

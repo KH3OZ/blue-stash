@@ -50,15 +50,15 @@
 }
 
 :root {
-  --background: #fbf5ec;
+  --background: #fdfbf8;
   --foreground: #2a2130;
   --card: #ffffff;
   --card-foreground: #2a2130;
   --popover: #ffffff;
   --popover-foreground: #2a2130;
-  --primary: #3d6fe0;
+  --primary: rgb(48, 127, 238);
   --primary-foreground: #ffffff;
-  --primary-hover: #2f5bc4;
+  --primary-hover: #2f70c4;
   --secondary: #db8a3c;
   --secondary-foreground: #2a2130;
   --muted: #ffffff;
@@ -75,7 +75,7 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: #fbf5ec;
+  --sidebar: #fdfbf8;
   --sidebar-foreground: #2a2130;
   --sidebar-primary: #3d6fe0;
   --sidebar-primary-foreground: #ffffff;
