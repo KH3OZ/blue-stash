@@ -1,5 +1,5 @@
 // Dev-only verification route for StashCard (Phase 3.1). Safe to delete, or keep for Phase 3.3.
-import { StashCard } from "@/components/stash/stash-card";
+import { StashCollection } from "@/components/stash/stash-collection";
 import type { Entry } from "@/generated/prisma/client";
 
 const mockEntries: Entry[] = [
@@ -95,11 +95,7 @@ export default function StashCardPreviewPage() {
       <h1 className="mb-6 text-xl font-semibold text-foreground">
         StashCard preview — {mockEntries.length} mock entries
       </h1>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {mockEntries.map((entry) => (
-          <StashCard key={entry.id} entry={entry} />
-        ))}
-      </div>
+      <StashCollection entries={mockEntries} />
     </div>
   );
 }

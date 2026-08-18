@@ -1,10 +1,12 @@
 import { ExternalLink, Star } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
 
-interface StashCardProps {
+interface StashCardPolaroidProps {
   entry: Entry;
+  index: number;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -13,17 +15,24 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-export function StashCard({ entry }: StashCardProps) {
-  // entry.category resolves through Prisma's generated `DefaultSelection` mapped
-  // type, which TS can't narrow inline for Record indexing — cast to the app's
-  // own Category union (same runtime values) to avoid an implicit-any error.
+// Deterministic per-index tilt (not Math.random) so server and client render
+// the same rotation and hydration doesn't mismatch.
+const TILTS = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"];
+
+export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
+  const tilt = TILTS[index % TILTS.length];
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-card transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-black/40">
-      <div className="relative aspect-4/5 w-full bg-foreground/5">
+    <article
+      className={cn(
+        "bg-card p-3 pb-4 shadow-md transition-transform duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-xl dark:shadow-black/30",
+        tilt
+      )}
+    >
+      <div className="relative aspect-square w-full overflow-hidden bg-foreground/5">
         {entry.coverUrl ? (
           <img
             src={entry.coverUrl}
@@ -50,14 +59,12 @@ export function StashCard({ entry }: StashCardProps) {
         )}
       </div>
 
-      <div className="flex flex-col gap-1 px-4 py-3">
-        <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+      <div className="flex flex-col items-center gap-1 pt-3 text-center">
+        <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
           {CATEGORY_LABELS[category]}
         </span>
 
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-          {entry.title}
-        </h3>
+        <h3 className="line-clamp-2 text-sm font-semibold text-foreground italic">{entry.title}</h3>
 
         {(entry.rating !== null || entry.date) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -78,7 +85,7 @@ export function StashCard({ entry }: StashCardProps) {
         )}
 
         {entry.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap justify-center gap-1.5 pt-1">
             {entry.tags.map((tag: string) => (
               <span
                 key={tag}
