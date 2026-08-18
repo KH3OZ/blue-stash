@@ -34,7 +34,7 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
     >
       <div
         aria-hidden="true"
-        className="absolute -top-1.5 -left-1.5 z-10 flex rotate-45 flex-col items-center drop-shadow-sm"
+        className="absolute -top-1.5 -right-0.5 z-10 flex rotate-45 flex-col items-center drop-shadow-sm"
       >
         <span className="size-2.5 rounded-full bg-primary" />
         <span className="h-2.5 w-0.5 bg-primary/80" />

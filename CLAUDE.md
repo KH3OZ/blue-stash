@@ -123,19 +123,38 @@ conventions before writing code — don't re-derive decisions already made below
 - **Category filtering lives in React Context**, not a URL query param —
   `src/context/category-filter-context.tsx` (`CategoryFilterProvider` +
   `useCategoryFilter()`), provided in `src/app/layout.tsx` alongside `SidebarProvider`.
-  The sidebar (`src/components/layout/app-sidebar.tsx`) reads/writes it via the hook; the
-  grid (Phase 3.3) can consume the same hook once built.
+  The sidebar (`src/components/layout/app-sidebar.tsx`) and the grid
+  (`src/components/stash/stash-collection-container.tsx`) both read it via the hook.
 - **Category source of truth:** `src/types/category.ts` — exports `Category` type,
   `CATEGORIES`, `CATEGORY_LABELS`, `CATEGORY_ICONS`, and `NavFilter` /
   `ALL_FILTER_*`. Always import from here rather than redefining category lists.
+- **Prisma 7 requires a driver adapter — there is no plain `new PrismaClient()`.**
+  The generator is `prisma-client` (not `prisma-client-js`), output to
+  `src/generated/prisma`. Runtime code must install and pass an adapter explicitly:
+  `src/lib/prisma.ts` uses `@prisma/adapter-pg` (`pg` driver) with `DATABASE_URL` (the
+  Supabase transaction-mode pooler, `pgbouncer=true`). `prisma.config.ts` uses
+  `DIRECT_URL` instead, for migrations only. `@prisma/client`, `@prisma/adapter-pg`, and
+  `pg` are all required runtime `dependencies`, not just the `prisma` CLI devDependency —
+  omitting any of them throws `Cannot find module '@prisma/client/runtime/client'`.
 
 **Key files (as of Phase 2 + in-progress Phase 3):**
 - `src/app/layout.tsx` — full shell composition, `SidebarProvider`, cookie-based sidebar
   state read server-side (no flash)
-- `src/app/page.tsx` — homepage, wires in the composer
+- `src/app/page.tsx` — homepage: composer hero, then `StashCollectionContainer` below it
 - `src/app/globals.css` — all design tokens (light + dark), `--sidebar-*` tokens
 - `src/context/category-filter-context.tsx` — `CategoryFilterProvider` +
   `useCategoryFilter()`, shared category-selection state (see §7)
+- `src/lib/prisma.ts` — Prisma Client singleton (driver adapter + `DATABASE_URL`, see §7)
+- `src/app/actions/get-entries.ts` — Server Action `getEntries(filter: NavFilter)`,
+  queries `Entry` via Prisma, "ALL" = no `where` clause, sorted newest-first
+  (`date desc`, nulls last)
+- `src/components/stash/stash-collection-container.tsx` — client component: calls
+  `getEntries()` with the current `useCategoryFilter()` value, re-fetches on change,
+  renders a skeleton while loading, an empty state (distinguishing "no stashes yet" from
+  "nothing in this category yet"), or `StashCollection`
+- `prisma/seed.ts` — one-off script (`npx tsx prisma/seed.ts`), seeds 9 verification
+  entries across all 7 categories if the table is empty; safe to re-run (no-ops if rows
+  already exist)
 - `src/components/layout/site-header.tsx` — header, includes `SidebarTrigger`
 - `src/components/layout/app-sidebar.tsx` — shadcn `Sidebar`, "All" + 5 categories,
   tooltips when collapsed, collapses to icon-only rail (not full hide)
@@ -217,12 +236,14 @@ contrast calculation before use, not eyeballed. Two concrete findings so far:
 
 - **Phase 1** (Supabase schema + Prisma models) — complete
 - **Phase 2** (UI shell) — complete: header, sidebar, homepage composer, theming, verified
-- **Phase 3** (StashCard + grid) — in progress. Sub-tasks: 3.1 card display — grew from a
+- **Phase 3** (StashCard + grid) — complete. Sub-tasks: 3.1 card display — grew from a
   single card component into a 2-mode view system (`StashCollection` + switcher: Polaroid
   default, Timeline; Editorial was explored then removed) → 3.2 lift category-filter
   state out of the sidebar into shared Context (`CategoryFilterProvider` /
-  `useCategoryFilter()`) — done, not yet consumed by a grid → 3.3 grid + Supabase data
-  fetching, filtered by 3.2's shared state.
+  `useCategoryFilter()`) → 3.3 real Supabase data via a Server Action
+  (`getEntries`/`get-entries.ts`), wired into the homepage through
+  `StashCollectionContainer`, filtered by 3.2's shared state, with loading/empty states.
+  Verification data: 9 seeded entries across all 7 categories (`prisma/seed.ts`).
 
 For full phase list (4: entry creation, 5: Smart Capture, 6: filtering/search), see
 `BlueStash_Project_Proposal.md` §8.
