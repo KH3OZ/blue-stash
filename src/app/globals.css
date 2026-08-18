@@ -59,14 +59,14 @@
   --primary: rgb(48, 127, 238);
   --primary-foreground: #ffffff;
   --primary-hover: #2f70c4;
-  --secondary: #db8a3c;
+  --secondary: #000916;
   --secondary-foreground: #2a2130;
   --muted: #ffffff;
   --muted-foreground: #7a6c82;
   --accent: #ffffff;
   --accent-foreground: #2a2130;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #e7dccb;
+  --border: #044997;
   --input: #e7dccb;
   --ring: #3d6fe0;
   --chart-1: oklch(0.87 0 0);

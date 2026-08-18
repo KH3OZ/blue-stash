@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Archive } from "lucide-react";
 
-const PLACEHOLDER = "What do you want to remember?";
+
+const PLACEHOLDER = "anything that makes you smile today...";
 
 export function StashComposer() {
   const [value, setValue] = useState("");
@@ -11,15 +12,18 @@ export function StashComposer() {
   return (
     <section className="w-full max-w-2xl">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          What&rsquo;s worth keeping?
-        </h1>
+        <div className="flex items-center justify-center gap-2">
+          <Archive className="size-8.5 text-primary" aria-hidden="true" />
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            How&rsquo;s your day going?
+          </h1>
+        </div>
         <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-         anything you&rsquo;ll want back later.
+         Capture anything you&rsquo;ll want back later.
         </p>
       </div>
 
-      <div className="mt-8 rounded-3xl border border-border bg-card p-2 transition-colors focus-within:border-secondary dark:focus-within:border-primary">
+      <div className="mt-8 rounded-3xl border border-border bg-card p-2 transition-colors focus-within:border-primary dark:focus-within:border-primary">
         <textarea
           value={value}
           onChange={(event) => setValue(event.target.value)}

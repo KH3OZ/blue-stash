@@ -72,7 +72,7 @@ export function SiteHeader() {
 
           <ThemeToggle />
 
-          <Button className="shrink-0 gap-1.5 transition-colors hover:bg-primary-hover">
+          <Button className="shrink-0 gap-1 transition-colors hover:bg-primary-hover">
             <Plus className="size-4.5" aria-hidden="true" />
             <span className="hidden sm:inline">Add Stash</span>
           </Button>
