@@ -59,7 +59,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {FILTERS.map((filter) => {
                   const Icon = iconFor(filter);
-                  const isActive = active === filter;
+                  const isActive = pathname === "/wall" && active === filter;
 
                   return (
                     <SidebarMenuItem key={filter}>
