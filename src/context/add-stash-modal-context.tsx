@@ -35,7 +35,7 @@ function SavedToast({ message, onDismiss }: { message: string; onDismiss: () => 
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-6 left-1/2 z-60 flex -translate-x-1/2 items-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background shadow-xl duration-200 animate-in fade-in-0 slide-in-from-bottom-2"
+      className="fixed bottom-6 left-1/2 z-60 flex -translate-x-1/2 items-center gap-2 rounded-full bg-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-50 shadow-xl duration-200 animate-in fade-in-0 slide-in-from-bottom-2 dark:bg-neutral-700"
     >
       <CheckCircle2 className="size-4" aria-hidden="true" />
       {message}

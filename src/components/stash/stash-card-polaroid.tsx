@@ -72,7 +72,7 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
           {CATEGORY_LABELS[category]}
         </span>
 
-        <h3 className="line-clamp-2 text-sm font-semibold text-foreground italic">{entry.title}</h3>
+        <h3 className="line-clamp-2 px-0.5 text-sm font-semibold text-foreground italic">{entry.title}</h3>
 
         {(entry.rating !== null || entry.date) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
