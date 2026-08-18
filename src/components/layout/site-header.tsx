@@ -6,9 +6,11 @@ import { Archive, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { useAddStashModal } from "@/context/add-stash-modal-context";
 
 export function SiteHeader() {
   const { state, isMobile } = useSidebar();
+  const { openModal } = useAddStashModal();
   const sidebarOffset = isMobile
     ? undefined
     : state === "expanded"
@@ -72,7 +74,10 @@ export function SiteHeader() {
 
           <ThemeToggle />
 
-          <Button className="shrink-0 gap-1 transition-colors hover:bg-primary-hover">
+          <Button
+            className="shrink-0 gap-1 transition-colors hover:bg-primary-hover"
+            onClick={() => openModal()}
+          >
             <Plus className="size-4.5" aria-hidden="true" />
             <span className="hidden sm:inline">Add Stash</span>
           </Button>
