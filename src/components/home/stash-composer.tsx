@@ -38,7 +38,7 @@ export function StashComposer() {
         </p>
       </div>
 
-      <div className="mt-8 rounded-3xl border border-border bg-card p-2 transition-colors focus-within:border-primary">
+      <div className="mt-8 rounded-3xl border border-border bg-card p-2 transition-colors focus-within:border-secondary dark:focus-within:border-primary">
         <textarea
           value={value}
           onChange={(event) => setValue(event.target.value)}

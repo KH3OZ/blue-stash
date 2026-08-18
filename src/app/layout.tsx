@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { CategoryNav } from "@/components/layout/category-nav";
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
@@ -23,7 +25,10 @@ export const metadata: Metadata = {
   description: "Your personal stash of videos, reads, games, audio, and life moments.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const cookieStore = await cookies();
+  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
+
   return (
     <html
       lang="en"
@@ -32,11 +37,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <SiteHeader />
-          <CategoryNav />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-            {children}
-          </main>
+          <SidebarProvider defaultOpen={sidebarOpen} className="flex-col">
+            <SiteHeader />
+            <div className="flex flex-1">
+              <AppSidebar />
+              <SidebarInset>
+                <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+                  {children}
+                </main>
+              </SidebarInset>
+            </div>
+          </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>
