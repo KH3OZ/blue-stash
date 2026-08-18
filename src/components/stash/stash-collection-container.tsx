@@ -5,6 +5,7 @@ import { Archive } from "lucide-react";
 
 import { getEntries } from "@/app/actions/get-entries";
 import { StashCollection } from "@/components/stash/stash-collection";
+import { useAddStashModal } from "@/context/add-stash-modal-context";
 import { useCategoryFilter } from "@/context/category-filter-context";
 import type { Entry } from "@/generated/prisma/client";
 import type { NavFilter } from "@/types/category";
@@ -24,6 +25,7 @@ function StashSkeleton() {
 
 export function StashCollectionContainer() {
   const { activeFilter } = useCategoryFilter();
+  const { refreshToken } = useAddStashModal();
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [loadedFilter, setLoadedFilter] = useState<NavFilter | null>(null);
 
@@ -43,7 +45,10 @@ export function StashCollectionContainer() {
     return () => {
       cancelled = true;
     };
-  }, [activeFilter]);
+    // refreshToken isn't read here — it's a pure signal bumped after a
+    // successful save so this effect re-fetches even though activeFilter
+    // didn't change (e.g. saving via the header button while on /wall).
+  }, [activeFilter, refreshToken]);
 
   if (entries === null) {
     return <StashSkeleton />;

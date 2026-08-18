@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { Star, X } from "lucide-react";
+import { Loader2, Star, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { createEntry } from "@/app/actions/create-entry";
 import { cn } from "@/lib/utils";
+import type { Entry } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -67,7 +69,7 @@ interface AddStashModalProps {
   onOpenChange: (open: boolean) => void;
   initialShortTake: string;
   initialCategory?: Category;
-  onSaved: (entry: AddStashEntry) => void;
+  onSaved: (entry: Entry) => void;
 }
 
 export function AddStashModal({
@@ -93,6 +95,8 @@ export function AddStashModal({
   const [dirty, setDirty] = useState(false);
   const [touchedTitle, setTouchedTitle] = useState(false);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, startSaveTransition] = useTransition();
 
   // Reseed the form when the modal transitions closed -> open. Adjusting
   // state during render (rather than in an effect) avoids an extra render
@@ -115,6 +119,7 @@ export function AddStashModal({
       setReflectionMode("write");
       setDirty(false);
       setTouchedTitle(false);
+      setSaveError(null);
     }
   }
 
@@ -178,9 +183,16 @@ export function AddStashModal({
       tags,
     };
 
-    console.log(entry);
-    onSaved(entry);
-    onOpenChange(false);
+    setSaveError(null);
+    startSaveTransition(async () => {
+      const result = await createEntry(entry);
+      if (!result.success) {
+        setSaveError(result.error);
+        return;
+      }
+      onSaved(result.entry);
+      onOpenChange(false);
+    });
   }
 
   return (
@@ -464,10 +476,22 @@ export function AddStashModal({
           >
             Cancel
           </DialogClose>
-          <Button type="button" onClick={handleSave} disabled={!canSave}>
-            Save
+          <Button type="button" onClick={handleSave} disabled={!canSave || isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Saving&hellip;
+              </>
+            ) : (
+              "Save"
+            )}
           </Button>
         </DialogFooter>
+        {saveError && (
+          <p role="alert" className="text-right text-xs text-destructive">
+            {saveError}
+          </p>
+        )}
       </DialogContent>
       </Dialog>
 
