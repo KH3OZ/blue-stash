@@ -136,11 +136,18 @@ conventions before writing code — don't re-derive decisions already made below
   `DIRECT_URL` instead, for migrations only. `@prisma/client`, `@prisma/adapter-pg`, and
   `pg` are all required runtime `dependencies`, not just the `prisma` CLI devDependency —
   omitting any of them throws `Cannot find module '@prisma/client/runtime/client'`.
+- **Two routes.** `/` renders only the composer hero (capture, no stash content). `/wall`
+  is the Memory Wall (named after the proposal doc's term, §4.2) — Polaroid/Timeline
+  views of stashed entries. Both share the header + sidebar from `src/app/layout.tsx`;
+  only `children` (the page body) differs. Selecting a sidebar category from `/`
+  navigates to `/wall` (via `useRouter().push`, guarded by `usePathname()` so selecting a
+  category while already on `/wall` just filters in place, no redundant navigation).
 
 **Key files (as of Phase 2 + in-progress Phase 3):**
 - `src/app/layout.tsx` — full shell composition, `SidebarProvider`, cookie-based sidebar
   state read server-side (no flash)
-- `src/app/page.tsx` — homepage: composer hero, then `StashCollectionContainer` below it
+- `src/app/page.tsx` — homepage (`/`): composer hero only, no stash content
+- `src/app/wall/page.tsx` — Memory Wall (`/wall`): mounts `StashCollectionContainer`
 - `src/app/globals.css` — all design tokens (light + dark), `--sidebar-*` tokens
 - `src/context/category-filter-context.tsx` — `CategoryFilterProvider` +
   `useCategoryFilter()`, shared category-selection state (see §7)
