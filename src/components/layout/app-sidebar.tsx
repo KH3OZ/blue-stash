@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { useCategoryFilter } from "@/context/category-filter-context";
 import {
   Sidebar,
   SidebarContent,
@@ -35,7 +36,16 @@ function iconFor(filter: NavFilter) {
 }
 
 export function AppSidebar() {
-  const [active, setActive] = useState<NavFilter>("ALL");
+  const { activeFilter: active, setActiveFilter: setActive } = useCategoryFilter();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  function handleSelect(filter: NavFilter) {
+    setActive(filter);
+    if (pathname !== "/wall") {
+      router.push("/wall");
+    }
+  }
 
   return (
     <TooltipProvider>
@@ -49,7 +59,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {FILTERS.map((filter) => {
                   const Icon = iconFor(filter);
-                  const isActive = active === filter;
+                  const isActive = pathname === "/wall" && active === filter;
 
                   return (
                     <SidebarMenuItem key={filter}>
@@ -57,7 +67,7 @@ export function AppSidebar() {
                         isActive={isActive}
                         aria-current={isActive ? "true" : undefined}
                         tooltip={labelFor(filter)}
-                        onClick={() => setActive(filter)}
+                        onClick={() => handleSelect(filter)}
                       >
                         <Icon
                           aria-hidden="true"

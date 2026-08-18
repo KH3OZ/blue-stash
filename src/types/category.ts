@@ -1,14 +1,23 @@
 import {
   BookOpen,
+  Calendar,
   Camera,
   Clapperboard,
+  Film,
   Gamepad2,
   Headphones,
   LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 
-export type Category = "VIDEO" | "READING" | "GAMING" | "AUDIO" | "LIFE_MOMENTS";
+export type Category =
+  | "VIDEO"
+  | "READING"
+  | "GAMING"
+  | "AUDIO"
+  | "LIFE_MOMENTS"
+  | "EVENTS"
+  | "FILMS";
 
 export const CATEGORIES: Category[] = [
   "VIDEO",
@@ -16,6 +25,8 @@ export const CATEGORIES: Category[] = [
   "GAMING",
   "AUDIO",
   "LIFE_MOMENTS",
+  "EVENTS",
+  "FILMS",
 ];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
@@ -24,6 +35,8 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   GAMING: "Gaming",
   AUDIO: "Audio",
   LIFE_MOMENTS: "Life Moments",
+  EVENTS: "Events",
+  FILMS: "Films",
 };
 
 export const CATEGORY_ICONS: Record<Category, LucideIcon> = {
@@ -32,6 +45,8 @@ export const CATEGORY_ICONS: Record<Category, LucideIcon> = {
   GAMING: Gamepad2,
   AUDIO: Headphones,
   LIFE_MOMENTS: Camera,
+  EVENTS: Calendar,
+  FILMS: Film,
 };
 
 export type NavFilter = "ALL" | Category;
