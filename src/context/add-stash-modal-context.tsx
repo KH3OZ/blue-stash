@@ -13,6 +13,8 @@ type OpenModalOptions = {
 
 type AddStashModalContextValue = {
   openModal: (options?: OpenModalOptions) => void;
+  openEditModal: (entry: Entry) => void;
+  notifyDeleted: (title: string) => void;
   /**
    * Increments every time a save succeeds, regardless of which trigger opened
    * the modal. StashCollectionContainer depends on this to know when to
@@ -45,6 +47,8 @@ function SavedToast({ message, onDismiss }: { message: string; onDismiss: () => 
 
 export function AddStashModalProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"create" | "edit">("create");
+  const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [initialShortTake, setInitialShortTake] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
@@ -52,8 +56,17 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
   const toastIdRef = useRef(0);
 
   const openModal = useCallback((options?: OpenModalOptions) => {
+    setMode("create");
+    setEditingEntry(null);
     setInitialShortTake(options?.initialShortTake ?? "");
     onSavedRef.current = options?.onSaved;
+    setOpen(true);
+  }, []);
+
+  const openEditModal = useCallback((entry: Entry) => {
+    setMode("edit");
+    setEditingEntry(entry);
+    onSavedRef.current = undefined;
     setOpen(true);
   }, []);
 
@@ -61,15 +74,24 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
     onSavedRef.current?.();
     setRefreshToken((token) => token + 1);
     toastIdRef.current += 1;
-    setToast({ id: toastIdRef.current, message: `"${entry.title}" added to your stash.` });
+    const message = mode === "edit" ? `"${entry.title}" updated.` : `"${entry.title}" added to your stash.`;
+    setToast({ id: toastIdRef.current, message });
   }
 
+  const notifyDeleted = useCallback((title: string) => {
+    setRefreshToken((token) => token + 1);
+    toastIdRef.current += 1;
+    setToast({ id: toastIdRef.current, message: `"${title}" deleted.` });
+  }, []);
+
   return (
-    <AddStashModalContext.Provider value={{ openModal, refreshToken }}>
+    <AddStashModalContext.Provider value={{ openModal, openEditModal, notifyDeleted, refreshToken }}>
       {children}
       <AddStashModal
         open={open}
         onOpenChange={setOpen}
+        mode={mode}
+        existingEntry={editingEntry}
         initialShortTake={initialShortTake}
         onSaved={handleSaved}
       />

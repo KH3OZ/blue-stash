@@ -1,10 +1,13 @@
 "use client";
 
-import { ExternalLink, Star } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ExternalLink, Loader2, Star } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { deleteEntry } from "@/app/actions/delete-entry";
 import { cn } from "@/lib/utils";
+import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
 
 interface EntryDetailModalProps {
@@ -37,13 +50,34 @@ function hostnameOf(url: string) {
 }
 
 export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModalProps) {
+  const { openEditModal, notifyDeleted } = useAddStashModal();
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, startDeleteTransition] = useTransition();
+
   if (!entry) return null;
+
+  function handleConfirmDelete() {
+    if (!entry) return;
+    setDeleteError(null);
+    startDeleteTransition(async () => {
+      const result = await deleteEntry(entry.id);
+      if (!result.success) {
+        setDeleteError(result.error);
+        return;
+      }
+      notifyDeleted(entry.title);
+      setConfirmDeleteOpen(false);
+      onOpenChange(false);
+    });
+  }
 
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(nextOpen) => onOpenChange(nextOpen)}>
       <DialogContent className="scrollbar-hidden flex max-h-[85vh] w-full max-w-lg flex-col overflow-y-auto sm:max-w-lg">
         <DialogHeader className="sr-only">
@@ -146,16 +180,59 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
           <Button
             type="button"
             variant="outline"
-            className="border-2 border-foreground text-foreground"
-            onClick={() => console.log("delete clicked", entry.id)}
+            className="border-2 border-foreground text-foreground transition-colors hover:border-destructive hover:bg-destructive/5 hover:text-destructive"
+            onClick={() => {
+              setDeleteError(null);
+              setConfirmDeleteOpen(true);
+            }}
           >
             Delete
           </Button>
-          <Button type="button" onClick={() => console.log("edit clicked", entry.id)}>
+          <Button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              openEditModal(entry);
+            }}
+          >
             Edit
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+          <AlertDialogDescription>
+            &ldquo;{entry.title}&rdquo; will be permanently deleted. This can&rsquo;t be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {deleteError && (
+          <p role="alert" className="text-sm text-destructive">
+            {deleteError}
+          </p>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirmDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-white hover:bg-destructive/90"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Deleting&hellip;
+              </>
+            ) : (
+              "Delete"
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { createEntry } from "@/app/actions/create-entry";
+import { updateEntry } from "@/app/actions/update-entry";
 import { cn } from "@/lib/utils";
 import type { Entry } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,37 @@ function todayIso() {
   return localMidnight.toISOString().slice(0, 10);
 }
 
+function toIsoDate(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+interface EntrySnapshot {
+  title: string;
+  category: Category;
+  rating: number | null;
+  coverUrl: string | null;
+  externalLink: string | null;
+  date: string;
+  shortTake: string | null;
+  deepReflection: string | null;
+  tags: string[];
+}
+
+function snapshotFromEntry(entry: Entry): EntrySnapshot {
+  return {
+    title: entry.title.trim(),
+    category: entry.category as Category,
+    rating: entry.rating,
+    coverUrl: entry.coverUrl,
+    externalLink: entry.externalLink,
+    date: entry.date ? toIsoDate(entry.date) : todayIso(),
+    shortTake: entry.shortTake,
+    deepReflection: entry.deepReflection,
+    tags: entry.tags,
+  };
+}
+
 export interface AddStashEntry {
   title: string;
   category: Category;
@@ -67,7 +99,9 @@ export interface AddStashEntry {
 interface AddStashModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialShortTake: string;
+  mode?: "create" | "edit";
+  existingEntry?: Entry | null;
+  initialShortTake?: string;
   initialCategory?: Category;
   onSaved: (entry: Entry) => void;
 }
@@ -75,11 +109,14 @@ interface AddStashModalProps {
 export function AddStashModal({
   open,
   onOpenChange,
-  initialShortTake,
+  mode = "create",
+  existingEntry = null,
+  initialShortTake = "",
   initialCategory = "LIFE_MOMENTS",
   onSaved,
 }: AddStashModalProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const [originalSnapshot, setOriginalSnapshot] = useState<EntrySnapshot | null>(null);
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>(initialCategory);
@@ -106,16 +143,31 @@ export function AddStashModal({
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setTitle("");
-      setCategory(initialCategory);
-      setShortTake(initialShortTake);
-      setRating(null);
-      setCoverUrl("");
-      setExternalLink("");
-      setDate(todayIso());
-      setTags([]);
+      if (mode === "edit" && existingEntry) {
+        const snapshot = snapshotFromEntry(existingEntry);
+        setOriginalSnapshot(snapshot);
+        setTitle(snapshot.title);
+        setCategory(snapshot.category);
+        setShortTake(snapshot.shortTake ?? "");
+        setRating(snapshot.rating);
+        setCoverUrl(snapshot.coverUrl ?? "");
+        setExternalLink(snapshot.externalLink ?? "");
+        setDate(snapshot.date);
+        setTags(snapshot.tags);
+        setDeepReflection(snapshot.deepReflection ?? "");
+      } else {
+        setOriginalSnapshot(null);
+        setTitle("");
+        setCategory(initialCategory);
+        setShortTake(initialShortTake);
+        setRating(null);
+        setCoverUrl("");
+        setExternalLink("");
+        setDate(todayIso());
+        setTags([]);
+        setDeepReflection("");
+      }
       setTagDraft("");
-      setDeepReflection("");
       setReflectionMode("write");
       setDirty(false);
       setTouchedTitle(false);
@@ -127,12 +179,30 @@ export function AddStashModal({
     setDirty(true);
   }
 
+  function hasUnsavedChanges() {
+    const original = originalSnapshot;
+    if (!original) return dirty;
+
+    return (
+      title.trim() !== original.title ||
+      category !== original.category ||
+      rating !== original.rating ||
+      (coverUrl.trim() || null) !== original.coverUrl ||
+      (externalLink.trim() || null) !== original.externalLink ||
+      date !== original.date ||
+      (shortTake.trim() || null) !== original.shortTake ||
+      (deepReflection.trim() || null) !== original.deepReflection ||
+      tags.length !== original.tags.length ||
+      tags.some((tag, i) => tag !== original.tags[i])
+    );
+  }
+
   function handleOpenChange(nextOpen: boolean, eventDetails: DialogPrimitive.Root.ChangeEventDetails) {
     if (nextOpen) {
       onOpenChange(true);
       return;
     }
-    if (dirty) {
+    if (hasUnsavedChanges()) {
       eventDetails.cancel();
       setConfirmDiscardOpen(true);
       return;
@@ -185,7 +255,10 @@ export function AddStashModal({
 
     setSaveError(null);
     startSaveTransition(async () => {
-      const result = await createEntry(entry);
+      const result =
+        mode === "edit" && existingEntry
+          ? await updateEntry(existingEntry.id, entry)
+          : await createEntry(entry);
       if (!result.success) {
         setSaveError(result.error);
         return;
@@ -203,7 +276,7 @@ export function AddStashModal({
         initialFocus={titleInputRef}
       >
         <DialogHeader>
-          <DialogTitle>{CATEGORY_HEADINGS[category]}</DialogTitle>
+          <DialogTitle>{mode === "edit" ? "Edit Stash" : CATEGORY_HEADINGS[category]}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-5">
@@ -480,8 +553,10 @@ export function AddStashModal({
             {isSaving ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                Saving&hellip;
+                {mode === "edit" ? "Updating…" : "Saving…"}
               </>
+            ) : mode === "edit" ? (
+              "Update"
             ) : (
               "Save"
             )}
