@@ -515,7 +515,7 @@ export function AddStashModal({
                   markDirty();
                 }}
                 rows={6}
-                placeholder="Write in Markdown..."
+                placeholder="Your detail thoughts..."
                 className="w-full resize-none rounded-2xl border border-border bg-input/50 px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
               />
             ) : (

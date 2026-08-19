@@ -1,6 +1,7 @@
-import { Check, ExternalLink, Star } from "lucide-react";
+import { Check, ExternalLink, Heart, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
 
@@ -25,6 +26,7 @@ export function StashTimelineRow({
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
+  const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite);
 
   return (
     <article
@@ -114,12 +116,34 @@ export function StashTimelineRow({
         )}
       </div>
 
-      {entry.rating !== null && (
-        <span className="ml-auto flex shrink-0 items-center gap-1 text-xs text-foreground">
-          <Star className="size-3 fill-primary text-primary" aria-hidden="true" />
-          {entry.rating}/{ratingScale}
-        </span>
-      )}
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        {entry.rating !== null && (
+          <span className="flex items-center gap-1 text-xs text-foreground">
+            <Star className="size-3 fill-primary text-primary" aria-hidden="true" />
+            {entry.rating}/{ratingScale}
+          </span>
+        )}
+
+        {!selectionMode && (
+          <button
+            type="button"
+            aria-pressed={favorite}
+            aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggle();
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            className="flex size-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <Heart
+              className={cn("size-4", favorite ? "fill-primary text-primary" : "")}
+              aria-hidden="true"
+            />
+          </button>
+        )}
+      </div>
     </article>
   );
 }

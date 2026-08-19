@@ -1,6 +1,7 @@
-import { Check, ExternalLink, Star } from "lucide-react";
+import { Check, ExternalLink, Heart, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
 
@@ -33,6 +34,7 @@ export function StashCardPolaroid({
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
   const tilt = TILTS[index % TILTS.length];
+  const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite);
 
   return (
     <article
@@ -105,6 +107,26 @@ export function StashCardPolaroid({
           >
             <ExternalLink className="size-3.5" aria-hidden="true" />
           </a>
+        )}
+
+        {!selectionMode && (
+          <button
+            type="button"
+            aria-pressed={favorite}
+            aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggle();
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            className="absolute top-2 left-2 flex size-10 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <Heart
+              className={cn("size-4", favorite ? "fill-primary text-primary" : "text-muted-foreground")}
+              aria-hidden="true"
+            />
+          </button>
         )}
       </div>
 

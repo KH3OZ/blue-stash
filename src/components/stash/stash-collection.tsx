@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { CheckSquare, Loader2 } from "lucide-react";
 
 import { deleteEntries } from "@/app/actions/delete-entries";
-import { EntryDetailModal } from "@/components/stash/entry-detail-modal";
 import { StashCardPolaroid } from "@/components/stash/stash-card-polaroid";
+import { StashFilterControls } from "@/components/stash/stash-filter-controls";
 import { StashTimelineRow } from "@/components/stash/stash-timeline-row";
 import { StashViewSwitcher } from "@/components/stash/stash-view-switcher";
 import { Button } from "@/components/ui/button";
@@ -21,17 +21,31 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
-import { DEFAULT_VIEW_MODE, type ViewMode } from "@/types/view-mode";
+import type { SortOption } from "@/types/sort";
+import type { ViewMode } from "@/types/view-mode";
 
 interface StashCollectionProps {
   entries: Entry[];
+  sort: SortOption;
+  onSortChange: (sort: SortOption) => void;
+  favoritesOnly: boolean;
+  onFavoritesOnlyChange: (favoritesOnly: boolean) => void;
+  viewMode: ViewMode;
+  onViewModeChange: (viewMode: ViewMode) => void;
+  onEntrySelect: (entry: Entry) => void;
 }
 
-export function StashCollection({ entries }: StashCollectionProps) {
+export function StashCollection({
+  entries,
+  sort,
+  onSortChange,
+  favoritesOnly,
+  onFavoritesOnlyChange,
+  viewMode,
+  onViewModeChange,
+  onEntrySelect,
+}: StashCollectionProps) {
   const { notifyBulkDeleted } = useAddStashModal();
-  const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE);
-  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
@@ -56,8 +70,7 @@ export function StashCollection({ entries }: StashCollectionProps) {
       });
       return;
     }
-    setSelectedEntry(entry);
-    setDetailOpen(true);
+    onEntrySelect(entry);
   }
 
   function handleSelectAll() {
@@ -131,7 +144,13 @@ export function StashCollection({ entries }: StashCollectionProps) {
               Delete selected
             </Button>
           )}
-          <StashViewSwitcher value={viewMode} onChange={setViewMode} />
+          <StashFilterControls
+            sort={sort}
+            onSortChange={onSortChange}
+            favoritesOnly={favoritesOnly}
+            onFavoritesOnlyChange={onFavoritesOnlyChange}
+          />
+          <StashViewSwitcher value={viewMode} onChange={onViewModeChange} />
         </div>
       </div>
 
@@ -161,8 +180,6 @@ export function StashCollection({ entries }: StashCollectionProps) {
           ))}
         </div>
       )}
-
-      <EntryDetailModal entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} />
 
       <AlertDialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
         <AlertDialogContent>

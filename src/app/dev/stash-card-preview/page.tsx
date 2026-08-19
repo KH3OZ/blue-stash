@@ -1,6 +1,13 @@
+"use client";
+
 // Dev-only verification route for StashCard (Phase 3.1). Safe to delete, or keep for Phase 3.3.
+import { useState } from "react";
+
+import { EntryDetailModal } from "@/components/stash/entry-detail-modal";
 import { StashCollection } from "@/components/stash/stash-collection";
 import type { Entry } from "@/generated/prisma/client";
+import { DEFAULT_SORT, type SortOption } from "@/types/sort";
+import { DEFAULT_VIEW_MODE, type ViewMode } from "@/types/view-mode";
 
 const mockEntries: Entry[] = [
   {
@@ -97,12 +104,31 @@ const mockEntries: Entry[] = [
 ];
 
 export default function StashCardPreviewPage() {
+  const [sort, setSort] = useState<SortOption>(DEFAULT_SORT);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background p-6 sm:p-10">
       <h1 className="mb-6 text-xl font-semibold text-foreground">
         StashCard preview — {mockEntries.length} mock entries
       </h1>
-      <StashCollection entries={mockEntries} />
+      <StashCollection
+        entries={mockEntries}
+        sort={sort}
+        onSortChange={setSort}
+        favoritesOnly={favoritesOnly}
+        onFavoritesOnlyChange={setFavoritesOnly}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onEntrySelect={(entry) => {
+          setSelectedEntry(entry);
+          setDetailOpen(true);
+        }}
+      />
+      <EntryDetailModal entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>
   );
 }
