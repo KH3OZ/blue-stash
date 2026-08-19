@@ -14,6 +14,7 @@ const mockEntries: Entry[] = [
     shortTake: "Gorgeous animation, bittersweet ending. Worth the wait.",
     deepReflection: null,
     tags: ["animation", "sci-fi", "netflix"],
+    favorite: false,
   },
   {
     id: "2",
@@ -26,6 +27,7 @@ const mockEntries: Entry[] = [
     shortTake: "Andy Weir does it again — funny, tense, genuinely moving.",
     deepReflection: null,
     tags: ["sci-fi", "book-club"],
+    favorite: false,
   },
   {
     id: "3",
@@ -38,6 +40,7 @@ const mockEntries: Entry[] = [
     shortTake: "Still deciding if I romance the vampire or the druid.",
     deepReflection: null,
     tags: ["rpg", "co-op", "long-haul", "steam"],
+    favorite: false,
   },
   {
     id: "4",
@@ -50,6 +53,7 @@ const mockEntries: Entry[] = [
     shortTake: null,
     deepReflection: null,
     tags: ["podcast"],
+    favorite: false,
   },
   {
     id: "5",
@@ -62,6 +66,7 @@ const mockEntries: Entry[] = [
     shortTake: "Perfect weather, terrible sunburn, worth it.",
     deepReflection: null,
     tags: ["friends", "summer", "beach", "roadtrip", "memories", "2026"],
+    favorite: false,
   },
   {
     id: "6",
@@ -74,6 +79,7 @@ const mockEntries: Entry[] = [
     shortTake: "Discovered a new favorite trio in the side tent.",
     deepReflection: null,
     tags: ["live-music", "jazz"],
+    favorite: false,
   },
   {
     id: "7",
@@ -86,6 +92,7 @@ const mockEntries: Entry[] = [
     shortTake: null,
     deepReflection: null,
     tags: [],
+    favorite: false,
   },
 ];
 
