@@ -8,6 +8,8 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CategoryFilterProvider } from "@/context/category-filter-context";
+import { AddStashModalProvider } from "@/context/add-stash-modal-context";
+import { SearchProvider } from "@/context/search-context";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -39,17 +41,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <CategoryFilterProvider>
-            <SidebarProvider defaultOpen={sidebarOpen} className="flex-col">
-              <SiteHeader />
-              <div className="flex flex-1">
-                <AppSidebar />
-                <SidebarInset>
-                  <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-                    {children}
-                  </main>
-                </SidebarInset>
-              </div>
-            </SidebarProvider>
+            <SearchProvider>
+              <AddStashModalProvider>
+                <SidebarProvider defaultOpen={sidebarOpen} className="flex-col">
+                  <SiteHeader />
+                  <div className="flex flex-1">
+                    <AppSidebar />
+                    <SidebarInset>
+                      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+                        {children}
+                      </main>
+                    </SidebarInset>
+                  </div>
+                </SidebarProvider>
+              </AddStashModalProvider>
+            </SearchProvider>
           </CategoryFilterProvider>
         </ThemeProvider>
       </body>

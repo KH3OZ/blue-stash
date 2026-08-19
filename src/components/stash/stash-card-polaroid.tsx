@@ -1,12 +1,16 @@
-import { ExternalLink, Star } from "lucide-react";
+import { Check, ExternalLink, Heart, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
 
 interface StashCardPolaroidProps {
   entry: Entry;
   index: number;
+  onSelect: (entry: Entry) => void;
+  selectionMode?: boolean;
+  selected?: boolean;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -19,26 +23,64 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 // the same rotation and hydration doesn't mismatch.
 const TILTS = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"];
 
-export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
+export function StashCardPolaroid({
+  entry,
+  index,
+  onSelect,
+  selectionMode = false,
+  selected = false,
+}: StashCardPolaroidProps) {
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
   const tilt = TILTS[index % TILTS.length];
+  const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite);
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      aria-pressed={selectionMode ? selected : undefined}
+      aria-label={
+        selectionMode
+          ? `${selected ? "Deselect" : "Select"} ${entry.title}`
+          : `View details for ${entry.title}`
+      }
+      onClick={() => onSelect(entry)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(entry);
+        }
+      }}
       className={cn(
-        "relative bg-card p-3 pb-4 shadow-md transition-transform duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-xl dark:shadow-black/30",
+        "relative cursor-pointer bg-card p-3 pb-4 shadow-md transition-transform duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:shadow-black/30",
         tilt
       )}
     >
-      <div
-        aria-hidden="true"
-        className="absolute -top-1.5 -right-0.5 z-10 flex rotate-45 flex-col items-center drop-shadow-sm"
-      >
-        <span className="size-2.5 rounded-full bg-primary" />
-        <span className="h-2.5 w-0.5 bg-primary/80" />
-      </div>
+      {!selectionMode && (
+        <div
+          aria-hidden="true"
+          className="absolute -top-1.5 -right-0.5 z-10 flex rotate-45 flex-col items-center drop-shadow-sm"
+        >
+          <span className="size-2.5 rounded-full bg-primary" />
+          <span className="h-2.5 w-0.5 bg-primary/80" />
+        </div>
+      )}
+
+      {selectionMode && (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "absolute top-1 left-1 z-10 flex size-6 items-center justify-center rounded-md border-2 shadow-sm transition-colors",
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-background/90 text-transparent"
+          )}
+        >
+          <Check className="size-4" />
+        </div>
+      )}
 
       <div className="relative aspect-square w-full overflow-hidden bg-foreground/5">
         {entry.coverUrl ? (
@@ -60,10 +102,31 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Open external link for ${entry.title}`}
+            onClick={(event) => event.stopPropagation()}
             className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <ExternalLink className="size-3.5" aria-hidden="true" />
           </a>
+        )}
+
+        {!selectionMode && (
+          <button
+            type="button"
+            aria-pressed={favorite}
+            aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggle();
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            className="absolute top-2 left-2 flex size-10 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <Heart
+              className={cn("size-4", favorite ? "fill-primary text-primary" : "text-muted-foreground")}
+              aria-hidden="true"
+            />
+          </button>
         )}
       </div>
 
@@ -72,7 +135,7 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
           {CATEGORY_LABELS[category]}
         </span>
 
-        <h3 className="line-clamp-2 text-sm font-semibold text-foreground italic">{entry.title}</h3>
+        <h3 className="line-clamp-2 px-0.5 text-sm font-semibold text-foreground italic">{entry.title}</h3>
 
         {(entry.rating !== null || entry.date) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

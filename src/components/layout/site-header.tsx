@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Archive, Plus, Search } from "lucide-react";
+import { Archive, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { HeaderSearchTypeahead } from "@/components/layout/header-search-typeahead";
+import { useAddStashModal } from "@/context/add-stash-modal-context";
 
 export function SiteHeader() {
   const { state, isMobile } = useSidebar();
+  const { openModal } = useAddStashModal();
   const sidebarOffset = isMobile
     ? undefined
     : state === "expanded"
@@ -45,34 +48,14 @@ export function SiteHeader() {
         )}
 
         <div className="mx-auto flex h-16 w-full max-w-2xl items-center gap-4 px-4 sm:px-6">
-          {isMobile ? (
-            <button
-              type="button"
-              disabled
-              aria-label="Search your stash"
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors disabled:cursor-not-allowed"
-            >
-              <Search className="size-4" aria-hidden="true" />
-            </button>
-          ) : (
-            <div className="relative flex-1">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                placeholder="Search your stash..."
-                disabled
-                aria-label="Search your stash"
-                className="h-9 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary disabled:cursor-not-allowed"
-              />
-            </div>
-          )}
+          <HeaderSearchTypeahead />
 
           <ThemeToggle />
 
-          <Button className="shrink-0 gap-1 transition-colors hover:bg-primary-hover">
+          <Button
+            className="shrink-0 gap-1 transition-colors hover:bg-primary-hover"
+            onClick={() => openModal()}
+          >
             <Plus className="size-4.5" aria-hidden="true" />
             <span className="hidden sm:inline">Add Stash</span>
           </Button>

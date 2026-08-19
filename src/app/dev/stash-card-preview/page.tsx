@@ -1,6 +1,13 @@
+"use client";
+
 // Dev-only verification route for StashCard (Phase 3.1). Safe to delete, or keep for Phase 3.3.
+import { useState } from "react";
+
+import { EntryDetailModal } from "@/components/stash/entry-detail-modal";
 import { StashCollection } from "@/components/stash/stash-collection";
 import type { Entry } from "@/generated/prisma/client";
+import { DEFAULT_SORT, type SortOption } from "@/types/sort";
+import { DEFAULT_VIEW_MODE, type ViewMode } from "@/types/view-mode";
 
 const mockEntries: Entry[] = [
   {
@@ -14,6 +21,7 @@ const mockEntries: Entry[] = [
     shortTake: "Gorgeous animation, bittersweet ending. Worth the wait.",
     deepReflection: null,
     tags: ["animation", "sci-fi", "netflix"],
+    favorite: false,
   },
   {
     id: "2",
@@ -26,6 +34,7 @@ const mockEntries: Entry[] = [
     shortTake: "Andy Weir does it again — funny, tense, genuinely moving.",
     deepReflection: null,
     tags: ["sci-fi", "book-club"],
+    favorite: false,
   },
   {
     id: "3",
@@ -38,6 +47,7 @@ const mockEntries: Entry[] = [
     shortTake: "Still deciding if I romance the vampire or the druid.",
     deepReflection: null,
     tags: ["rpg", "co-op", "long-haul", "steam"],
+    favorite: false,
   },
   {
     id: "4",
@@ -50,6 +60,7 @@ const mockEntries: Entry[] = [
     shortTake: null,
     deepReflection: null,
     tags: ["podcast"],
+    favorite: false,
   },
   {
     id: "5",
@@ -62,6 +73,7 @@ const mockEntries: Entry[] = [
     shortTake: "Perfect weather, terrible sunburn, worth it.",
     deepReflection: null,
     tags: ["friends", "summer", "beach", "roadtrip", "memories", "2026"],
+    favorite: false,
   },
   {
     id: "6",
@@ -74,6 +86,7 @@ const mockEntries: Entry[] = [
     shortTake: "Discovered a new favorite trio in the side tent.",
     deepReflection: null,
     tags: ["live-music", "jazz"],
+    favorite: false,
   },
   {
     id: "7",
@@ -86,16 +99,36 @@ const mockEntries: Entry[] = [
     shortTake: null,
     deepReflection: null,
     tags: [],
+    favorite: false,
   },
 ];
 
 export default function StashCardPreviewPage() {
+  const [sort, setSort] = useState<SortOption>(DEFAULT_SORT);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background p-6 sm:p-10">
       <h1 className="mb-6 text-xl font-semibold text-foreground">
         StashCard preview — {mockEntries.length} mock entries
       </h1>
-      <StashCollection entries={mockEntries} />
+      <StashCollection
+        entries={mockEntries}
+        sort={sort}
+        onSortChange={setSort}
+        favoritesOnly={favoritesOnly}
+        onFavoritesOnlyChange={setFavoritesOnly}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onEntrySelect={(entry) => {
+          setSelectedEntry(entry);
+          setDetailOpen(true);
+        }}
+      />
+      <EntryDetailModal entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>
   );
 }

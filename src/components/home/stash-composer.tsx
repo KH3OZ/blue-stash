@@ -1,13 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { ArrowUp, Archive } from "lucide-react";
 
+import { useAddStashModal } from "@/context/add-stash-modal-context";
 
 const PLACEHOLDER = "anything that makes you smile today...";
 
 export function StashComposer() {
   const [value, setValue] = useState("");
+  const { openModal } = useAddStashModal();
+
+  function handleSubmit() {
+    if (value.trim().length === 0) return;
+    openModal({
+      initialShortTake: value,
+      onSaved: () => setValue(""),
+    });
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit();
+    }
+  }
 
   return (
     <section className="w-full max-w-2xl">
@@ -27,6 +44,7 @@ export function StashComposer() {
         <textarea
           value={value}
           onChange={(event) => setValue(event.target.value)}
+          onKeyDown={handleKeyDown}
           rows={3}
           placeholder={PLACEHOLDER}
           aria-label={PLACEHOLDER}
@@ -37,6 +55,7 @@ export function StashComposer() {
             type="button"
             disabled={value.trim().length === 0}
             aria-label="Save to your stash"
+            onClick={handleSubmit}
             className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ArrowUp className="size-4" aria-hidden="true" />
