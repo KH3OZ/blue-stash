@@ -1,4 +1,4 @@
-import { ExternalLink, Star } from "lucide-react";
+import { Check, ExternalLink, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
@@ -8,6 +8,8 @@ interface StashCardPolaroidProps {
   entry: Entry;
   index: number;
   onSelect: (entry: Entry) => void;
+  selectionMode?: boolean;
+  selected?: boolean;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -20,7 +22,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 // the same rotation and hydration doesn't mismatch.
 const TILTS = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"];
 
-export function StashCardPolaroid({ entry, index, onSelect }: StashCardPolaroidProps) {
+export function StashCardPolaroid({
+  entry,
+  index,
+  onSelect,
+  selectionMode = false,
+  selected = false,
+}: StashCardPolaroidProps) {
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
@@ -30,7 +38,12 @@ export function StashCardPolaroid({ entry, index, onSelect }: StashCardPolaroidP
     <article
       role="button"
       tabIndex={0}
-      aria-label={`View details for ${entry.title}`}
+      aria-pressed={selectionMode ? selected : undefined}
+      aria-label={
+        selectionMode
+          ? `${selected ? "Deselect" : "Select"} ${entry.title}`
+          : `View details for ${entry.title}`
+      }
       onClick={() => onSelect(entry)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -43,13 +56,29 @@ export function StashCardPolaroid({ entry, index, onSelect }: StashCardPolaroidP
         tilt
       )}
     >
-      <div
-        aria-hidden="true"
-        className="absolute -top-1.5 -right-0.5 z-10 flex rotate-45 flex-col items-center drop-shadow-sm"
-      >
-        <span className="size-2.5 rounded-full bg-primary" />
-        <span className="h-2.5 w-0.5 bg-primary/80" />
-      </div>
+      {!selectionMode && (
+        <div
+          aria-hidden="true"
+          className="absolute -top-1.5 -right-0.5 z-10 flex rotate-45 flex-col items-center drop-shadow-sm"
+        >
+          <span className="size-2.5 rounded-full bg-primary" />
+          <span className="h-2.5 w-0.5 bg-primary/80" />
+        </div>
+      )}
+
+      {selectionMode && (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "absolute top-1 left-1 z-10 flex size-6 items-center justify-center rounded-md border-2 shadow-sm transition-colors",
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-background/90 text-transparent"
+          )}
+        >
+          <Check className="size-4" />
+        </div>
+      )}
 
       <div className="relative aspect-square w-full overflow-hidden bg-foreground/5">
         {entry.coverUrl ? (
