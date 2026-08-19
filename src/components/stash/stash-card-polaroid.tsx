@@ -7,6 +7,7 @@ import type { Entry } from "@/generated/prisma/client";
 interface StashCardPolaroidProps {
   entry: Entry;
   index: number;
+  onSelect: (entry: Entry) => void;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -19,7 +20,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 // the same rotation and hydration doesn't mismatch.
 const TILTS = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"];
 
-export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
+export function StashCardPolaroid({ entry, index, onSelect }: StashCardPolaroidProps) {
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
@@ -27,8 +28,18 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      aria-label={`View details for ${entry.title}`}
+      onClick={() => onSelect(entry)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect(entry);
+        }
+      }}
       className={cn(
-        "relative bg-card p-3 pb-4 shadow-md transition-transform duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-xl dark:shadow-black/30",
+        "relative cursor-pointer bg-card p-3 pb-4 shadow-md transition-transform duration-200 hover:-translate-y-1 hover:rotate-0 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:shadow-black/30",
         tilt
       )}
     >
@@ -60,6 +71,7 @@ export function StashCardPolaroid({ entry, index }: StashCardPolaroidProps) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Open external link for ${entry.title}`}
+            onClick={(event) => event.stopPropagation()}
             className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <ExternalLink className="size-3.5" aria-hidden="true" />
