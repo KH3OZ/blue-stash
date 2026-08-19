@@ -1,14 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { CheckSquare } from "lucide-react";
+import { useState, useTransition } from "react";
+import { CheckSquare, Loader2 } from "lucide-react";
 
+import { deleteEntries } from "@/app/actions/delete-entries";
 import { EntryDetailModal } from "@/components/stash/entry-detail-modal";
 import { StashCardPolaroid } from "@/components/stash/stash-card-polaroid";
 import { StashTimelineRow } from "@/components/stash/stash-timeline-row";
 import { StashViewSwitcher } from "@/components/stash/stash-view-switcher";
 import { Button } from "@/components/ui/button";
-import { useCategoryFilter } from "@/context/category-filter-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
 import { DEFAULT_VIEW_MODE, type ViewMode } from "@/types/view-mode";
 
@@ -17,20 +28,20 @@ interface StashCollectionProps {
 }
 
 export function StashCollection({ entries }: StashCollectionProps) {
-  const { activeFilter } = useCategoryFilter();
+  const { notifyBulkDeleted } = useAddStashModal();
   const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+  const [isBulkDeleting, startBulkDeleteTransition] = useTransition();
 
-  // Clear any selection when the active category filter changes, since the
-  // previously-selected entries may no longer be part of what's rendered.
-  const [prevFilter, setPrevFilter] = useState(activeFilter);
-  if (activeFilter !== prevFilter) {
-    setPrevFilter(activeFilter);
-    if (selectedIds.size > 0) setSelectedIds(new Set());
-  }
+  // No explicit filter-change handling needed here: StashCollectionContainer
+  // unmounts this component (swapping in a loading skeleton) on every
+  // activeFilter change before this component ever sees the new filter, so
+  // selectionMode/selectedIds are naturally reset by the remount.
 
   function handleCardClick(entry: Entry) {
     if (selectionMode) {
@@ -59,7 +70,23 @@ export function StashCollection({ entries }: StashCollectionProps) {
   }
 
   function handleDeleteSelected() {
-    console.log(Array.from(selectedIds));
+    setBulkDeleteError(null);
+    setConfirmBulkDeleteOpen(true);
+  }
+
+  function handleConfirmBulkDelete() {
+    setBulkDeleteError(null);
+    startBulkDeleteTransition(async () => {
+      const result = await deleteEntries(Array.from(selectedIds));
+      if (!result.success) {
+        setBulkDeleteError(result.error);
+        return;
+      }
+      notifyBulkDeleted(result.deletedCount);
+      setConfirmBulkDeleteOpen(false);
+      setSelectionMode(false);
+      setSelectedIds(new Set());
+    });
   }
 
   return (
@@ -136,6 +163,39 @@ export function StashCollection({ entries }: StashCollectionProps) {
       )}
 
       <EntryDetailModal entry={selectedEntry} open={detailOpen} onOpenChange={setDetailOpen} />
+
+      <AlertDialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} entries?</AlertDialogTitle>
+            <AlertDialogDescription>
+              These entries will be permanently deleted. This can&rsquo;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {bulkDeleteError && (
+            <p role="alert" className="text-sm text-destructive">
+              {bulkDeleteError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmBulkDelete}
+              disabled={isBulkDeleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isBulkDeleting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  Deleting&hellip;
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -15,6 +15,7 @@ type AddStashModalContextValue = {
   openModal: (options?: OpenModalOptions) => void;
   openEditModal: (entry: Entry) => void;
   notifyDeleted: (title: string) => void;
+  notifyBulkDeleted: (deletedCount: number) => void;
   /**
    * Increments every time a save succeeds, regardless of which trigger opened
    * the modal. StashCollectionContainer depends on this to know when to
@@ -84,8 +85,17 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
     setToast({ id: toastIdRef.current, message: `"${title}" deleted.` });
   }, []);
 
+  const notifyBulkDeleted = useCallback((deletedCount: number) => {
+    setRefreshToken((token) => token + 1);
+    toastIdRef.current += 1;
+    const noun = deletedCount === 1 ? "entry" : "entries";
+    setToast({ id: toastIdRef.current, message: `${deletedCount} ${noun} deleted.` });
+  }, []);
+
   return (
-    <AddStashModalContext.Provider value={{ openModal, openEditModal, notifyDeleted, refreshToken }}>
+    <AddStashModalContext.Provider
+      value={{ openModal, openEditModal, notifyDeleted, notifyBulkDeleted, refreshToken }}
+    >
       {children}
       <AddStashModal
         open={open}
