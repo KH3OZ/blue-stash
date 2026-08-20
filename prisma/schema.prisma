@@ -34,4 +34,7 @@ model Entry {
   deepReflection String?
   tags           String[]  @default([])
   favorite       Boolean   @default(false)
+  userId         String    @db.Uuid
+
+  @@index([userId])
 }

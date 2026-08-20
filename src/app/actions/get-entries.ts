@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId } from "@/lib/supabase/get-current-user";
 import type { Entry, Prisma } from "@/generated/prisma/client";
 import type { NavFilter } from "@/types/category";
 import { DEFAULT_SORT, type SortOption } from "@/types/sort";
@@ -18,7 +19,15 @@ export async function getEntries({
   sort = DEFAULT_SORT,
   favoritesOnly = false,
 }: GetEntriesParams): Promise<Entry[]> {
+  let userId: string;
+  try {
+    userId = await getCurrentUserId();
+  } catch {
+    return [];
+  }
+
   const where: Prisma.EntryWhereInput = {
+    userId,
     ...(category === "ALL" ? undefined : { category }),
     ...(favoritesOnly ? { favorite: true } : undefined),
   };

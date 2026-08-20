@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId } from "@/lib/supabase/get-current-user";
 import { CATEGORIES, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
 
@@ -35,9 +36,24 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
     return { success: false, error: "A valid date is required." };
   }
 
+  let userId: string;
+  try {
+    userId = await getCurrentUserId();
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "You must be signed in to do that." };
+  }
+
+  const existing = await prisma.entry.findUnique({ where: { id }, select: { userId: true } });
+  if (!existing) {
+    return { success: false, error: "Entry not found." };
+  }
+  if (existing.userId !== userId) {
+    return { success: false, error: "You don't have permission to modify this entry." };
+  }
+
   try {
     const entry = await prisma.entry.update({
-      where: { id },
+      where: { id, userId },
       data: {
         title,
         category: input.category,

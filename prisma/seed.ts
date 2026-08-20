@@ -8,7 +8,9 @@ import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-const entries: Prisma.EntryCreateManyInput[] = [
+const OWNER_USER_ID = "a85c7ba7-eef5-4d1d-923a-4260dbf7d430";
+
+const entries: Omit<Prisma.EntryCreateManyInput, "userId">[] = [
   {
     title: "Arcane Season 2 — the finale hit harder than expected",
     category: "VIDEO",
@@ -109,7 +111,9 @@ async function main() {
     return;
   }
 
-  await prisma.entry.createMany({ data: entries });
+  await prisma.entry.createMany({
+    data: entries.map((entry) => ({ ...entry, userId: OWNER_USER_ID })),
+  });
   console.log(`Seeded ${entries.length} entries.`);
 }
 

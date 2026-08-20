@@ -114,6 +114,28 @@ conventions before writing code — don't re-derive decisions already made below
 ### 7. Repo Structure & Gotchas (learned the hard way — don't rediscover these)
 
 - **Uses `src/` directory.** App Router lives at `src/app/`, not root `app/`.
+- **Route protection lives at `src/proxy.ts`, not root `middleware.ts`.** Next.js 16
+  deprecated the `middleware.ts` file convention and renamed it to `proxy.ts` (exported
+  function `middleware` → `proxy`) — an old `middleware.ts` is silently ignored, not an
+  error, so it fails with no warning at build or runtime. Placement matters too: Next
+  computes the proxy-discovery root as the *parent of `appDir`*, which for this project
+  (`src/app/`) is `src/` — so the file must live at `src/proxy.ts`, not the repo root,
+  or it's silently skipped there as well. Verify with `npm run build`: a correctly
+  discovered proxy prints a `ƒ Proxy (Middleware)` line in the route output; its absence
+  means the file isn't being picked up, regardless of how correct its logic is.
+- **Every entity-fetch Server Action must be scoped by `userId`, not just the
+  list/plural ones.** Task 3 correctly scoped `getEntries` (the list action), but
+  `src/app/actions/get-entry.ts` — a separate *singular* lookup that powers the
+  `/wall?entry=<id>` deep-link modal — was written back in Phase 4.5, before auth
+  existed, and got missed entirely because it's a different file with a similar name.
+  It let any signed-in user open another user's entry via a guessed/shared URL until
+  Task 5 caught it. When adding auth scoping, grep for every `prisma.entry.find*` call
+  across `src/app/actions/`, not just the ones already named in the task — a single-row
+  `findUnique`/`findFirst` is exactly as much a leak surface as a list query. Fixed by
+  switching to `findFirst({ where: { id, userId } })` and using one identical
+  not-found error for both "row doesn't exist" and "row belongs to someone else" —
+  never let the response distinguish the two, or the error message itself becomes an
+  oracle for enumerating other users' valid entry ids.
 - **No `tailwind.config.ts` exists or should be created.** This project uses Tailwind v4's
   CSS-first config — all design tokens live in `src/app/globals.css` via shadcn's
   `@theme` / `.dark` CSS variable blocks. If you're about to create or edit a Tailwind
