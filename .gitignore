@@ -44,3 +44,7 @@ next-env.d.ts
 
 # superpowers brainstorming companion
 /.superpowers/
+
+# Claude Code configuration and context files
+CLAUDE.md
+.claude/
