@@ -3,24 +3,55 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GoogleIcon } from "@/components/icons/google-icon";
+
+type PasswordChecks = {
+  minLength: boolean;
+  hasUpper: boolean;
+  hasLower: boolean;
+  hasNumber: boolean;
+};
+
+const PASSWORD_REQUIREMENTS: { key: keyof PasswordChecks; label: string }[] = [
+  { key: "minLength", label: "At least 8 characters" },
+  { key: "hasUpper", label: "One uppercase letter" },
+  { key: "hasLower", label: "One lowercase letter" },
+  { key: "hasNumber", label: "One number" },
+];
+
+function getPasswordChecks(password: string): PasswordChecks {
+  return {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+  };
+}
 
 export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
+  const passwordChecks = getPasswordChecks(password);
+  const passwordValid = Object.values(passwordChecks).every(Boolean);
+  const passwordsMatch = confirmPassword.length > 0 && confirmPassword === password;
+  const canSubmit = passwordValid && passwordsMatch;
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canSubmit) return;
     setError(null);
     setIsSubmitting(true);
 
@@ -110,11 +141,67 @@ export default function SignUpPage() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={6}
+              minLength={8}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
+              aria-invalid={password.length > 0 && !passwordValid}
+              aria-describedby={password.length > 0 ? "sign-up-password-requirements" : undefined}
             />
+            {password.length > 0 && (
+              <ul id="sign-up-password-requirements" className="flex flex-col gap-1">
+                {PASSWORD_REQUIREMENTS.map((requirement) => {
+                  const met = passwordChecks[requirement.key];
+                  const Icon = met ? Check : X;
+                  return (
+                    <li
+                      key={requirement.key}
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs",
+                        met ? "text-green-700 dark:text-green-400" : "text-muted-foreground"
+                      )}
+                    >
+                      <Icon className="size-3.5" aria-hidden="true" />
+                      {requirement.label}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="sign-up-confirm-password" className="text-sm font-medium text-foreground">
+              Confirm Password
+            </label>
+            <Input
+              id="sign-up-confirm-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="••••••••"
+              aria-invalid={confirmPassword.length > 0 && !passwordsMatch}
+              aria-describedby={confirmPassword.length > 0 ? "sign-up-confirm-password-hint" : undefined}
+            />
+            {confirmPassword.length > 0 && (
+              <p
+                id="sign-up-confirm-password-hint"
+                role={passwordsMatch ? "status" : "alert"}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs",
+                  passwordsMatch ? "text-green-700 dark:text-green-400" : "text-destructive"
+                )}
+              >
+                {passwordsMatch ? (
+                  <Check className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <X className="size-3.5" aria-hidden="true" />
+                )}
+                {passwordsMatch ? "Passwords match." : "Passwords do not match."}
+              </p>
+            )}
           </div>
 
           {error && (
@@ -123,7 +210,7 @@ export default function SignUpPage() {
             </p>
           )}
 
-          <Button type="submit" className="mt-1 w-full" disabled={isSubmitting}>
+          <Button type="submit" className="mt-1 w-full" disabled={isSubmitting || !canSubmit}>
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />

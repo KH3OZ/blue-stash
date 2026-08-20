@@ -24,6 +24,20 @@ const ALLOWED_AVATAR_TYPES: Record<string, string> = {
 };
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
+// custom_avatar_url is our own field, separate from avatar_url (which
+// Google OAuth writes into user_metadata on sign-in). Writing uploads into
+// avatar_url directly would permanently overwrite Google's photo with no
+// way back, since nothing re-syncs it on later logins. Keeping our own
+// field and layering priority here means a custom upload takes precedence
+// without destroying the provider-supplied one underneath it.
+function resolveAvatarUrl(metadata: Record<string, unknown> | undefined): string | null {
+  const custom = metadata?.custom_avatar_url;
+  if (typeof custom === "string" && custom) return custom;
+  const provider = metadata?.avatar_url;
+  if (typeof provider === "string" && provider) return provider;
+  return null;
+}
+
 export function UserAvatarMenu() {
   const router = useRouter();
   const { notifyError } = useAddStashModal();
@@ -37,12 +51,12 @@ export function UserAvatarMenu() {
 
     supabase.auth.getUser().then(({ data }) => {
       setEmail(data.user?.email ?? null);
-      setAvatarUrl(data.user?.user_metadata?.avatar_url ?? null);
+      setAvatarUrl(resolveAvatarUrl(data.user?.user_metadata));
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       setEmail(session?.user?.email ?? null);
-      setAvatarUrl(session?.user?.user_metadata?.avatar_url ?? null);
+      setAvatarUrl(resolveAvatarUrl(session?.user?.user_metadata));
     });
 
     return () => subscription.subscription.unsubscribe();
@@ -101,7 +115,7 @@ export function UserAvatarMenu() {
     const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
 
     const { error: updateError } = await supabase.auth.updateUser({
-      data: { avatar_url: cacheBustedUrl },
+      data: { custom_avatar_url: cacheBustedUrl },
     });
 
     setIsUploading(false);
