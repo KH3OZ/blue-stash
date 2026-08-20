@@ -6,6 +6,7 @@ import { Archive, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { UserMenu } from "@/components/layout/user-menu";
 import { HeaderSearchTypeahead } from "@/components/layout/header-search-typeahead";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
 
@@ -50,6 +51,7 @@ export function SiteHeader() {
         <div className="mx-auto flex h-16 w-full max-w-2xl items-center gap-4 px-4 sm:px-6">
           <HeaderSearchTypeahead />
 
+          <UserMenu />
           <ThemeToggle />
 
           <Button
