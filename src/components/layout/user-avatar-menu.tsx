@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Loader2, User } from "lucide-react";
+import { useSyncExternalStore } from "react";
+import { useTheme } from "next-themes";
+import { LogOut, Loader2, Moon, Sun, User } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
@@ -24,6 +26,16 @@ const ALLOWED_AVATAR_TYPES: Record<string, string> = {
 };
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
+const emptySubscribe = () => () => {};
+
+function useMounted() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
+
 // custom_avatar_url is our own field, separate from avatar_url (which
 // Google OAuth writes into user_metadata on sign-in). Writing uploads into
 // avatar_url directly would permanently overwrite Google's photo with no
@@ -41,6 +53,8 @@ function resolveAvatarUrl(metadata: Record<string, unknown> | undefined): string
 export function UserAvatarMenu() {
   const router = useRouter();
   const { notifyError } = useAddStashModal();
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useMounted();
   const [email, setEmail] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -165,6 +179,18 @@ export function UserAvatarMenu() {
             {isUploading ? <Loader2 className="animate-spin" aria-hidden="true" /> : null}
             {isUploading ? "Uploading…" : "Change photo"}
           </DropdownMenuItem>
+          {mounted ? (
+            <DropdownMenuItem
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            >
+              {resolvedTheme === "dark" ? (
+                <Sun aria-hidden="true" />
+              ) : (
+                <Moon aria-hidden="true" />
+              )}
+              {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
             <LogOut aria-hidden="true" />
