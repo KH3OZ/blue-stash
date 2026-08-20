@@ -163,7 +163,7 @@ export function HeaderSearchTypeahead() {
         isMobile
           ? mobileCollapsed
             ? "w-10 shrink-0"
-            : "absolute inset-y-0 left-0 right-16 z-50 bg-background px-4 sm:px-6"
+            : "absolute inset-y-0 left-0 right-16 z-40 bg-background px-4 sm:px-6"
           : "flex-1"
       )}
     >

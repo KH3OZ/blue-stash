@@ -33,7 +33,7 @@ export function SiteHeader() {
         </Link>
       )}
 
-      <div className="absolute right-5 top-1/2 -translate-y-1/2">
+      <div className="absolute right-5 top-1/2 z-50 -translate-y-1/2">
         <UserAvatarMenu />
       </div>
 
