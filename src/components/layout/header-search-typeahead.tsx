@@ -163,7 +163,7 @@ export function HeaderSearchTypeahead() {
         isMobile
           ? mobileCollapsed
             ? "w-10 shrink-0"
-            : "absolute inset-y-0 left-0 right-0 z-50 bg-background px-4 sm:px-6"
+            : "absolute inset-y-0 left-0 right-16 z-50 bg-background px-4 sm:px-6"
           : "flex-1"
       )}
     >
@@ -177,7 +177,8 @@ export function HeaderSearchTypeahead() {
         />
         <input
           ref={inputRef}
-          type="search"
+          type="text"
+          inputMode="search"
           role="combobox"
           aria-expanded={open}
           aria-controls={listboxId}
@@ -194,7 +195,7 @@ export function HeaderSearchTypeahead() {
           placeholder={mobileCollapsed ? undefined : "Search your stash..."}
           aria-label="Search your stash"
           className={cn(
-            "h-9 w-full text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary [&::-webkit-search-cancel-button]:appearance-none",
+            "h-9 w-full text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary",
             mobileCollapsed
               ? "h-10 cursor-pointer border-none bg-transparent p-0"
               : cn(
@@ -222,7 +223,7 @@ export function HeaderSearchTypeahead() {
             className={cn(
               "z-50 border-border bg-card shadow-lg",
               isMobile
-                ? "fixed inset-x-3 top-18 max-h-[70vh] overflow-y-auto rounded-xl border"
+                ? "fixed inset-x-4 top-20 max-h-[70vh] overflow-y-auto rounded-xl border"
                 : "absolute inset-x-0 top-full overflow-hidden rounded-b-xl border border-t-0"
             )}
           >
