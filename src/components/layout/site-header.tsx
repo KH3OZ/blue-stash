@@ -51,7 +51,7 @@ export function SiteHeader() {
           </>
         )}
 
-        <div className="mx-auto flex h-16 w-full max-w-2xl items-center gap-4 px-4 pr-16 sm:px-6 sm:pr-16">
+        <div className="relative mx-auto flex h-16 w-full max-w-2xl items-center gap-4 px-4 pr-16 sm:px-6 sm:pr-16">
           <HeaderSearchTypeahead />
 
           <Button

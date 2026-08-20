@@ -6,6 +6,7 @@ import { Search, X } from "lucide-react";
 
 import { getEntries } from "@/app/actions/get-entries";
 import { useSearch } from "@/context/search-context";
+import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { CATEGORY_ICONS, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
@@ -15,9 +16,14 @@ const DEBOUNCE_MS = 300;
 
 export function HeaderSearchTypeahead() {
   const router = useRouter();
+  const { isMobile } = useSidebar();
   const { query, setQuery } = useSearch();
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<Entry[] | null>(null);
+  // On mobile the input is icon-only until focused or typed into — this
+  // tracks that separately from `open` (which governs the results dropdown)
+  // since the input should stay expanded while focused even with no query.
+  const [mobileFocused, setMobileFocused] = useState(false);
   // Which query `results` was fetched for — lets `loading` be derived
   // (debouncedQuery set but results not yet caught up to it) instead of
   // tracked as its own flag that would need setting synchronously in the
@@ -68,6 +74,7 @@ export function HeaderSearchTypeahead() {
     function handlePointerDown(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false);
+        setMobileFocused(false);
       }
     }
 
@@ -75,17 +82,20 @@ export function HeaderSearchTypeahead() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
+  // On mobile the dropdown has room to scroll through everything, so skip
+  // the desktop "See more" pagination and just show the full match list.
   const visibleResults = currentResults
-    ? expanded
+    ? isMobile || expanded
       ? currentResults
       : currentResults.slice(0, RESULT_LIMIT)
     : [];
-  const hasMoreRow = !expanded && (currentResults?.length ?? 0) > RESULT_LIMIT;
+  const hasMoreRow = !isMobile && !expanded && (currentResults?.length ?? 0) > RESULT_LIMIT;
   const stopCount = visibleResults.length + (hasMoreRow ? 1 : 0);
 
   function selectEntry(entry: Entry) {
     setQuery("");
     setOpen(false);
+    setMobileFocused(false);
     setResultsFor(null);
     router.push(`/wall?entry=${entry.id}`);
   }
@@ -105,7 +115,12 @@ export function HeaderSearchTypeahead() {
     if (event.key === "Escape") {
       setOpen(false);
       setHighlightedIndex(-1);
-      inputRef.current?.focus();
+      if (!query.trim()) {
+        setMobileFocused(false);
+        inputRef.current?.blur();
+      } else {
+        inputRef.current?.focus();
+      }
       return;
     }
 
@@ -135,136 +150,169 @@ export function HeaderSearchTypeahead() {
         ? `${listboxId}-see-more`
         : `${listboxId}-${visibleResults[highlightedIndex]?.id}`;
 
+  // Collapsed to an icon-only tap target until focused or typed into; once
+  // active it overlays the full header row so it has room to grow instead
+  // of squeezing in next to the Add Stash button.
+  const mobileCollapsed = isMobile && !mobileFocused && !query.trim();
+
   return (
-    <div ref={containerRef} className="relative flex-1">
-      <Search
-        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-        aria-hidden="true"
-      />
-      <input
-        ref={inputRef}
-        type="search"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-activedescendant={activeDescendantId}
-        aria-autocomplete="list"
-        autoComplete="off"
-        value={query}
-        onChange={(event) => handleQueryChange(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => {
-          if (currentResults !== null) setOpen(true);
-        }}
-        placeholder="Search your stash..."
-        aria-label="Search your stash"
-        className={cn(
-          "h-9 w-full border border-border bg-card pr-9 pl-9 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary [&::-webkit-search-cancel-button]:appearance-none",
-          open ? "rounded-t-xl rounded-b-none border-b-transparent" : "rounded-xl"
-        )}
-      />
-      {query && (
-        <button
-          type="button"
-          onClick={() => {
-            handleQueryChange("");
-            inputRef.current?.focus();
-          }}
-          aria-label="Clear search"
-          className="absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          <X className="size-4" aria-hidden="true" />
-        </button>
+    <div
+      ref={containerRef}
+      className={cn(
+        "flex items-center transition-all duration-200 ease-out",
+        isMobile
+          ? mobileCollapsed
+            ? "w-10 shrink-0"
+            : "absolute inset-y-0 left-0 right-0 z-50 bg-background px-4 sm:px-6"
+          : "flex-1"
       )}
+    >
+      <div className="relative w-full">
+        <Search
+          className={cn(
+            "pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-muted-foreground",
+            mobileCollapsed ? "left-1/2 -translate-x-1/2" : "left-3"
+          )}
+          aria-hidden="true"
+        />
+        <input
+          ref={inputRef}
+          type="search"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-activedescendant={activeDescendantId}
+          aria-autocomplete="list"
+          autoComplete="off"
+          value={query}
+          onChange={(event) => handleQueryChange(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            setMobileFocused(true);
+            if (currentResults !== null) setOpen(true);
+          }}
+          placeholder={mobileCollapsed ? undefined : "Search your stash..."}
+          aria-label="Search your stash"
+          className={cn(
+            "h-9 w-full text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary [&::-webkit-search-cancel-button]:appearance-none",
+            mobileCollapsed
+              ? "h-10 cursor-pointer border-none bg-transparent p-0"
+              : cn(
+                  "border border-border bg-card pr-9 pl-9",
+                  open ? "rounded-t-xl rounded-b-none border-b-transparent" : "rounded-xl"
+                )
+          )}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => {
+              handleQueryChange("");
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear search"
+            className="absolute top-1/2 right-2.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        )}
 
-      {open && (
-        <div className="absolute inset-x-0 top-full z-50 overflow-hidden rounded-b-xl border border-t-0 border-border bg-card shadow-lg">
-          {loading ? (
-            <div className="flex flex-col gap-2 p-3" aria-hidden="true">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="h-9 animate-pulse rounded-lg bg-foreground/5" />
-              ))}
-            </div>
-          ) : currentResults && currentResults.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No matches for &ldquo;{debouncedQuery}&rdquo;
-            </p>
-          ) : currentResults && currentResults.length > 0 ? (
-            <ul
-              id={listboxId}
-              role="listbox"
-              aria-label="Search results"
-              onMouseLeave={() => setHighlightedIndex(-1)}
-              className={cn("flex flex-col p-1.5", expanded && "max-h-80 overflow-y-auto")}
-            >
-              {visibleResults.map((entry, index) => {
-                const CategoryIcon = CATEGORY_ICONS[entry.category as Category];
-                const optionId = `${listboxId}-${entry.id}`;
-                const highlighted = index === highlightedIndex;
+        {open && (
+          <div
+            className={cn(
+              "z-50 border-border bg-card shadow-lg",
+              isMobile
+                ? "fixed inset-x-0 top-16 max-h-[70vh] overflow-y-auto border-t"
+                : "absolute inset-x-0 top-full overflow-hidden rounded-b-xl border border-t-0"
+            )}
+          >
+            {loading ? (
+              <div className="flex flex-col gap-2 p-3" aria-hidden="true">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="h-9 animate-pulse rounded-lg bg-foreground/5" />
+                ))}
+              </div>
+            ) : currentResults && currentResults.length === 0 ? (
+              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                No matches for &ldquo;{debouncedQuery}&rdquo;
+              </p>
+            ) : currentResults && currentResults.length > 0 ? (
+              <ul
+                id={listboxId}
+                role="listbox"
+                aria-label="Search results"
+                onMouseLeave={() => setHighlightedIndex(-1)}
+                className={cn("flex flex-col p-1.5", expanded && "max-h-80 overflow-y-auto")}
+              >
+                {visibleResults.map((entry, index) => {
+                  const CategoryIcon = CATEGORY_ICONS[entry.category as Category];
+                  const optionId = `${listboxId}-${entry.id}`;
+                  const highlighted = index === highlightedIndex;
 
-                return (
-                  <li key={entry.id} role="presentation">
+                  return (
+                    <li key={entry.id} role="presentation">
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        id={optionId}
+                        role="option"
+                        aria-selected={highlighted}
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                        onClick={() => selectEntry(entry)}
+                        className={cn(
+                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all duration-150 ease-out",
+                          highlighted ? "translate-x-1 bg-accent" : "hover:translate-x-1 hover:bg-accent"
+                        )}
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-foreground/5">
+                          {entry.coverUrl ? (
+                            <img
+                              src={entry.coverUrl}
+                              alt=""
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <CategoryIcon className="size-4 text-foreground/30" aria-hidden="true" />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                          {entry.title}
+                        </span>
+                        <CategoryIcon
+                          className="size-3.5 shrink-0 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+
+                {hasMoreRow && currentResults && (
+                  <li role="presentation">
                     <button
                       type="button"
                       tabIndex={-1}
-                      id={optionId}
+                      id={`${listboxId}-see-more`}
                       role="option"
-                      aria-selected={highlighted}
-                      onMouseEnter={() => setHighlightedIndex(index)}
-                      onClick={() => selectEntry(entry)}
+                      aria-selected={highlightedIndex === visibleResults.length}
+                      onMouseEnter={() => setHighlightedIndex(visibleResults.length)}
+                      onClick={() => setExpanded(true)}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-all duration-150 ease-out",
-                        highlighted ? "translate-x-1 bg-accent" : "hover:translate-x-1 hover:bg-accent"
+                        "w-full rounded-lg px-2.5 py-2 text-center text-sm font-medium text-primary transition-all duration-150 ease-out",
+                        highlightedIndex === visibleResults.length
+                          ? "scale-[1.02] bg-accent"
+                          : "hover:scale-[1.02] hover:bg-accent"
                       )}
                     >
-                      <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-foreground/5">
-                        {entry.coverUrl ? (
-                          <img
-                            src={entry.coverUrl}
-                            alt=""
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <CategoryIcon className="size-4 text-foreground/30" aria-hidden="true" />
-                        )}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                        {entry.title}
-                      </span>
-                      <CategoryIcon
-                        className="size-3.5 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                      />
+                      See more ({currentResults.length})
                     </button>
                   </li>
-                );
-              })}
-
-              {hasMoreRow && currentResults && (
-                <li role="presentation">
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    id={`${listboxId}-see-more`}
-                    role="option"
-                    aria-selected={highlightedIndex === visibleResults.length}
-                    onMouseEnter={() => setHighlightedIndex(visibleResults.length)}
-                    onClick={() => setExpanded(true)}
-                    className={cn(
-                      "w-full rounded-lg px-2.5 py-2 text-center text-sm font-medium text-primary transition-all duration-150 ease-out",
-                      highlightedIndex === visibleResults.length
-                        ? "scale-[1.02] bg-accent"
-                        : "hover:scale-[1.02] hover:bg-accent"
-                    )}
-                  >
-                    See more ({currentResults.length})
-                  </button>
-                </li>
-              )}
-            </ul>
-          ) : null}
-        </div>
-      )}
+                )}
+              </ul>
+            ) : null}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
