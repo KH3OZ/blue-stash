@@ -350,7 +350,7 @@ export function AddStashModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-foreground">Rating</span>
+            <span className="text-sm font-medium text-foreground">Rating (optional)</span>
             <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
               {[1, 2, 3, 4, 5].map((value) => {
                 const filled = rating !== null && value <= rating;

@@ -56,7 +56,7 @@ export default function SignInPage() {
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 sm:p-8">
         <h1 className="text-xl font-semibold text-foreground">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Sign in to your BlueStash vault.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Sign in to keep your memory.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

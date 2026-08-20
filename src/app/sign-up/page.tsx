@@ -34,6 +34,10 @@ function getPasswordChecks(password: string): PasswordChecks {
   };
 }
 
+// Not full RFC 5322 — just enough to catch "missing @", "no domain suffix",
+// stray whitespace, etc. before hitting the network.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -44,10 +48,11 @@ export default function SignUpPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
+  const emailValid = EMAIL_PATTERN.test(email);
   const passwordChecks = getPasswordChecks(password);
   const passwordValid = Object.values(passwordChecks).every(Boolean);
   const passwordsMatch = confirmPassword.length > 0 && confirmPassword === password;
-  const canSubmit = passwordValid && passwordsMatch;
+  const canSubmit = emailValid && passwordValid && passwordsMatch;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -129,7 +134,19 @@ export default function SignUpPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
+              aria-invalid={email.length > 0 && !emailValid}
+              aria-describedby={email.length > 0 && !emailValid ? "sign-up-email-hint" : undefined}
             />
+            {email.length > 0 && !emailValid && (
+              <p
+                id="sign-up-email-hint"
+                role="alert"
+                className="flex items-center gap-1.5 text-xs text-destructive"
+              >
+                <X className="size-3.5" aria-hidden="true" />
+                Enter a valid email address.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
