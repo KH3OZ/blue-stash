@@ -222,7 +222,7 @@ export function HeaderSearchTypeahead() {
             className={cn(
               "z-50 border-border bg-card shadow-lg",
               isMobile
-                ? "fixed inset-x-0 top-16 max-h-[70vh] overflow-y-auto border-t"
+                ? "fixed inset-x-3 top-18 max-h-[70vh] overflow-y-auto rounded-xl border"
                 : "absolute inset-x-0 top-full overflow-hidden rounded-b-xl border border-t-0"
             )}
           >
