@@ -9,7 +9,7 @@ import type { Entry } from "@/generated/prisma/client";
 import { DEFAULT_SORT, type SortOption } from "@/types/sort";
 import { DEFAULT_VIEW_MODE, type ViewMode } from "@/types/view-mode";
 
-const mockEntries: Entry[] = [
+const mockEntriesBase: Omit<Entry, "userId">[] = [
   {
     id: "1",
     title: "Arcane Season 2 — the finale hit harder than expected",
@@ -102,6 +102,11 @@ const mockEntries: Entry[] = [
     favorite: false,
   },
 ];
+
+const mockEntries: Entry[] = mockEntriesBase.map((entry) => ({
+  ...entry,
+  userId: "00000000-0000-0000-0000-000000000000",
+}));
 
 export default function StashCardPreviewPage() {
   const [sort, setSort] = useState<SortOption>(DEFAULT_SORT);

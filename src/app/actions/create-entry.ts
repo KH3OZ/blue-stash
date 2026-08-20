@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId } from "@/lib/supabase/get-current-user";
 import { CATEGORIES, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
 
@@ -35,6 +36,13 @@ export async function createEntry(input: CreateEntryInput): Promise<CreateEntryR
     return { success: false, error: "A valid date is required." };
   }
 
+  let userId: string;
+  try {
+    userId = await getCurrentUserId();
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "You must be signed in to do that." };
+  }
+
   try {
     const entry = await prisma.entry.create({
       data: {
@@ -47,6 +55,7 @@ export async function createEntry(input: CreateEntryInput): Promise<CreateEntryR
         shortTake: input.shortTake?.trim() || null,
         deepReflection: input.deepReflection?.trim() || null,
         tags: input.tags ?? [],
+        userId,
       },
     });
 
