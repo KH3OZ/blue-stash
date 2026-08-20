@@ -1,14 +1,17 @@
 "use client";
 
-import { useRef, useState, useTransition, type KeyboardEvent } from "react";
+import { useRef, useState, useTransition, type ChangeEvent, type KeyboardEvent } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { Loader2, Star, X } from "lucide-react";
+import { Loader2, Star, Upload, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { createEntry } from "@/app/actions/create-entry";
 import { updateEntry } from "@/app/actions/update-entry";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { validateImageFile } from "@/lib/storage/validate-image-file";
+import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +39,14 @@ import {
   CATEGORY_LABELS,
   type Category,
 } from "@/types/category";
+
+const ALLOWED_COVER_TYPES: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
 const CATEGORY_HEADINGS: Record<Category, string> = {
   VIDEO: "What did you watch?",
@@ -102,6 +113,7 @@ interface AddStashModalProps {
   mode?: "create" | "edit";
   existingEntry?: Entry | null;
   initialShortTake?: string;
+  initialCoverUrl?: string;
   initialCategory?: Category;
   onSaved: (entry: Entry) => void;
 }
@@ -112,11 +124,15 @@ export function AddStashModal({
   mode = "create",
   existingEntry = null,
   initialShortTake = "",
+  initialCoverUrl = "",
   initialCategory = "LIFE_MOMENTS",
   onSaved,
 }: AddStashModalProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const { notifyError } = useAddStashModal();
   const [originalSnapshot, setOriginalSnapshot] = useState<EntrySnapshot | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>(initialCategory);
@@ -161,7 +177,7 @@ export function AddStashModal({
         setCategory(initialCategory);
         setShortTake(initialShortTake);
         setRating(null);
-        setCoverUrl("");
+        setCoverUrl(initialCoverUrl);
         setExternalLink("");
         setDate(todayIso());
         setTags([]);
@@ -231,6 +247,56 @@ export function AddStashModal({
       setTags((prev) => prev.slice(0, -1));
       markDirty();
     }
+  }
+
+  async function handleCoverFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!file) return;
+
+    const validation = validateImageFile(
+      file,
+      ALLOWED_COVER_TYPES,
+      MAX_COVER_BYTES,
+      "Please choose a PNG, JPEG, WEBP, or GIF image."
+    );
+    if (!validation.valid) {
+      notifyError(validation.error!);
+      return;
+    }
+
+    setIsUploadingCover(true);
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setIsUploadingCover(false);
+      notifyError("You must be signed in to do that.");
+      return;
+    }
+
+    const path = `${user.id}/${crypto.randomUUID()}.${validation.extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("stash-covers")
+      .upload(path, file, { upsert: false, contentType: file.type });
+
+    if (uploadError) {
+      console.error("Cover upload failed", uploadError);
+      setIsUploadingCover(false);
+      notifyError("Something went wrong while uploading your cover image. Please try again.");
+      return;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("stash-covers").getPublicUrl(path);
+
+    setIsUploadingCover(false);
+    setCoverUrl(publicUrl);
+    markDirty();
   }
 
   const titleError = touchedTitle && title.trim().length === 0 ? "Title is required." : null;
@@ -384,16 +450,47 @@ export function AddStashModal({
               <label htmlFor="stash-cover-url" className="text-sm font-medium text-foreground">
                 Cover URL
               </label>
-              <Input
-                id="stash-cover-url"
-                type="url"
-                value={coverUrl}
-                onChange={(event) => {
-                  setCoverUrl(event.target.value);
-                  markDirty();
-                }}
-                placeholder="https://..."
-              />
+              <div className="flex items-center gap-2">
+                {coverUrl.trim() ? (
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    className="size-9 shrink-0 rounded-lg border border-border object-cover"
+                  />
+                ) : null}
+                <Input
+                  id="stash-cover-url"
+                  type="url"
+                  value={coverUrl}
+                  onChange={(event) => {
+                    setCoverUrl(event.target.value);
+                    markDirty();
+                  }}
+                  placeholder="https://..."
+                />
+                <input
+                  ref={coverFileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  hidden
+                  onChange={handleCoverFileChange}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  disabled={isUploadingCover}
+                  onClick={() => coverFileInputRef.current?.click()}
+                  aria-label="Upload cover image"
+                >
+                  {isUploadingCover ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Upload className="size-4" aria-hidden="true" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="stash-external-link" className="text-sm font-medium text-foreground">

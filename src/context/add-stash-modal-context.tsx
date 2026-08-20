@@ -9,6 +9,7 @@ import type { Entry } from "@/generated/prisma/client";
 
 type OpenModalOptions = {
   initialShortTake?: string;
+  initialCoverUrl?: string;
   onSaved?: () => void;
 };
 
@@ -64,6 +65,7 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [initialShortTake, setInitialShortTake] = useState("");
+  const [initialCoverUrl, setInitialCoverUrl] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
   const [toast, setToast] = useState<ToastState | null>(null);
   const onSavedRef = useRef<(() => void) | undefined>(undefined);
@@ -73,6 +75,7 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
     setMode("create");
     setEditingEntry(null);
     setInitialShortTake(options?.initialShortTake ?? "");
+    setInitialCoverUrl(options?.initialCoverUrl ?? "");
     onSavedRef.current = options?.onSaved;
     setOpen(true);
   }, []);
@@ -133,6 +136,7 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
         mode={mode}
         existingEntry={editingEntry}
         initialShortTake={initialShortTake}
+        initialCoverUrl={initialCoverUrl}
         onSaved={handleSaved}
       />
       {toast && (

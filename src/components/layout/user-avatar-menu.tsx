@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { LogOut, Loader2, Moon, Sun, User } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { validateImageFile } from "@/lib/storage/validate-image-file";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -88,15 +89,17 @@ export function UserAvatarMenu() {
     event.target.value = "";
     if (!file) return;
 
-    const extension = ALLOWED_AVATAR_TYPES[file.type];
-    if (!extension) {
-      notifyError("Please choose a PNG, JPEG, or WEBP image.");
+    const validation = validateImageFile(
+      file,
+      ALLOWED_AVATAR_TYPES,
+      MAX_AVATAR_BYTES,
+      "Please choose a PNG, JPEG, or WEBP image."
+    );
+    if (!validation.valid) {
+      notifyError(validation.error!);
       return;
     }
-    if (file.size > MAX_AVATAR_BYTES) {
-      notifyError("Image must be smaller than 5MB.");
-      return;
-    }
+    const extension = validation.extension!;
 
     setIsUploading(true);
     const supabase = createClient();
