@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Check, ExternalLink, Heart, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -84,10 +85,14 @@ export function StashCardPolaroid({
 
       <div className="relative aspect-square w-full overflow-hidden bg-foreground/5">
         {entry.coverUrl ? (
-          <img
+          <Image
             src={entry.coverUrl}
             alt={entry.title}
-            loading="lazy"
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            unoptimized
+            priority={index < 4}
+            loading={index < 4 ? undefined : "lazy"}
             className="h-full w-full object-cover"
           />
         ) : (
