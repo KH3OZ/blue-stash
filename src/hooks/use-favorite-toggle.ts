@@ -5,8 +5,8 @@ import { useState } from "react";
 import { toggleFavorite } from "@/app/actions/toggle-favorite";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
 
-export function useFavoriteToggle(id: string, initialFavorite: boolean) {
-  const { notifyRefetchNeeded, notifyError } = useAddStashModal();
+export function useFavoriteToggle(id: string, initialFavorite: boolean, title: string) {
+  const { notifyFavoriteToggled, notifyError } = useAddStashModal();
   const [favorite, setFavorite] = useState(initialFavorite);
 
   async function toggle() {
@@ -20,7 +20,7 @@ export function useFavoriteToggle(id: string, initialFavorite: boolean) {
       return;
     }
 
-    notifyRefetchNeeded();
+    notifyFavoriteToggled(id, title, nextValue);
   }
 
   return { favorite, toggle };

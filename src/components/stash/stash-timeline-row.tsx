@@ -26,7 +26,7 @@ export function StashTimelineRow({
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
-  const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite);
+  const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite, entry.title);
 
   return (
     <article

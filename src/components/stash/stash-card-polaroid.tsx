@@ -35,7 +35,7 @@ export function StashCardPolaroid({
   const CategoryIcon = CATEGORY_ICONS[category];
   const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
   const tilt = TILTS[index % TILTS.length];
-  const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite);
+  const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite, entry.title);
 
   return (
     <article

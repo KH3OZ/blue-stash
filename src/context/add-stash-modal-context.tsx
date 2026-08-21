@@ -19,10 +19,12 @@ type AddStashModalContextValue = {
   openEditModal: (entry: Entry) => void;
   notifyDeleted: (title: string) => void;
   notifyBulkDeleted: (deletedCount: number) => void;
+  /** Shows a clickable toast confirming a favorite was toggled on/off. */
+  notifyFavoriteToggled: (entryId: string, title: string, isFavorite: boolean) => void;
   /**
-   * Bumps refreshToken silently (no toast) — for updates like a favorite
-   * toggle that are already reflected optimistically in the UI and don't
-   * need their own confirmation message.
+   * Bumps refreshToken silently (no toast) — for updates that are already
+   * reflected optimistically in the UI and don't need their own
+   * confirmation message.
    */
   notifyRefetchNeeded: () => void;
   /** Shows an error toast without touching refreshToken. */
@@ -172,6 +174,13 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
     setToast({ id: toastIdRef.current, message: `${deletedCount} ${noun} deleted.`, variant: "success" });
   }, []);
 
+  const notifyFavoriteToggled = useCallback((entryId: string, title: string, isFavorite: boolean) => {
+    setRefreshToken((token) => token + 1);
+    toastIdRef.current += 1;
+    const message = isFavorite ? `"${title}" added to favorites.` : `"${title}" removed from favorites.`;
+    setToast({ id: toastIdRef.current, message, variant: "success", entryId });
+  }, []);
+
   const notifyRefetchNeeded = useCallback(() => {
     setRefreshToken((token) => token + 1);
   }, []);
@@ -188,6 +197,7 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
         openEditModal,
         notifyDeleted,
         notifyBulkDeleted,
+        notifyFavoriteToggled,
         notifyRefetchNeeded,
         notifyError,
         refreshToken,
