@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BlueStash
 
-## Getting Started
+A personal digital vault and memory wall. Log, browse, and reflect on anything you consume or experience, videos, books, games, podcasts, and everyday life moments, in one visually cohesive, searchable space.
 
-First, run the development server:
+**Live:** [bluestash.app](https://bluestash.app)
+
+> Status: Beta. Core logging, browsing, and auth are live. See [Roadmap](#roadmap) for what's still in progress.
+
+---
+
+## Why this exists
+
+Reflection on something you watched, read, played, or experienced is valuable but fragile. Without a fast, low-friction place to capture it, the thought disappears within days. BlueStash gives that reflection one home, and makes revisiting it something you actually want to do.
+
+---
+
+## Features
+
+- **5 entry types:** Video, Reading, Gaming, Audio, and Life/Moments in one unified logging flow.
+- **Memory wall:** a responsive grid of past entries, with cover image, rating, short take, date, and tags at a glance.
+- **Quick capture or deep reflection:** log a short take in seconds, or come back later and write a full Markdown reflection. Neither is forced.
+- **Search, filter, and sort:** real-time search across title, tags, and text. Filter by category. Sort by date or rating.
+- **Full CRUD:** create, edit, and delete any entry, with a confirmation step before anything is lost.
+- **Cross-device sync:** your data follows you, backed by a cloud database, not stuck on one device.
+- **Google sign-in:** single-user auth, private by default. No public entry access.
+
+---
+
+## Tech stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| Framework | Next.js (App Router) + React | SSR-capable, strong ecosystem fit for the rest of the stack |
+| Styling | Tailwind CSS + shadcn/ui | Accessible defaults, fast to build and stay consistent |
+| Icons | Lucide React | Lightweight, consistent icon set |
+| Animation | Motion (`motion/react`) | Smooth grid loading and modal transitions |
+| Database | Supabase (Postgres) | Cross-device sync, bundled auth and storage |
+| ORM | Prisma | Type-safe schema and queries |
+| Auth | Supabase Auth (Google OAuth) | Single-user, private by default |
+| Storage | Supabase Storage | Bundled with the database, one dashboard |
+| Hosting | Vercel | Native fit for Next.js, auto-deploys on push to `main` |
+| Domain | bluestash.app | Custom domain via name.com |
+
+---
+
+## Getting started (local development)
+
+### Prerequisites
+- Node.js (LTS)
+- A Supabase project (free tier is enough for development)
+- `npm`
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/KH3OZ/blue-stash.git
+cd blue-stash
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create a `.env` file in the project root with the following variables. Never commit this file.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+DATABASE_URL=            # Supabase pooled connection string (port 6543)
+DIRECT_URL=               # Supabase direct connection string (port 5432), used for migrations
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run migrations and start the dev server:
 
-## Learn More
+```bash
+npx prisma migrate deploy
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+The app runs at `http://localhost:3000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+BlueStash deploys automatically. Every push to `main` triggers a Vercel build and deploy straight to [bluestash.app](https://bluestash.app). Pushes to other branches or open pull requests build a preview only, never the live site.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+A few things that matter in production and are easy to miss:
+- `prisma generate` runs on `postinstall`, since the Prisma Client uses a custom output path and won't exist otherwise.
+- `DATABASE_URL` must use Supabase's pooled connection (port `6543`) in production, not the direct connection, to avoid exhausting connections on serverless.
+- Supabase's **Site URL** and **Redirect URLs** (under Authentication → URL Configuration) must include the production domain, or Google sign-in will redirect back to `localhost`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Roadmap
+
+- **Smart Capture:** type a plain-language description (e.g. "Today I watched The Odyssey, one of the best movies I've seen") and have title, category, and date extracted automatically, with a confirm-before-save step. Video-only to start, verified against TMDB.
+- Metadata providers for Reading, Gaming, and Audio (manual entry only for now).
+- Scale testing and virtualization past ~1,000 entries.
+
+---
+
+## Non-goals (for now)
+
+- Multi-user or social features (sharing, following, public profiles).
+- Native mobile app (responsive web only).
+- Offline-first or local-only mode.
+
+---
+
+## License
+
+Personal project. Not currently licensed for reuse.
