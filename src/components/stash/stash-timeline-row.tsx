@@ -25,7 +25,6 @@ export function StashTimelineRow({
 }: StashTimelineRowProps) {
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
-  const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
   const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite, entry.title);
 
   return (
@@ -119,8 +118,8 @@ export function StashTimelineRow({
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {entry.rating !== null && (
           <span className="flex items-center gap-1 text-xs text-foreground">
-            <Star className="size-3 fill-primary text-primary" aria-hidden="true" />
-            {entry.rating}/{ratingScale}
+            <Star className="size-3.5 fill-primary text-primary" aria-hidden="true" />
+            {entry.rating}/5
           </span>
         )}
 

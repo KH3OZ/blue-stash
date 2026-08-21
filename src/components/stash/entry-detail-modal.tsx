@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ExternalLink, Loader2, Star } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
+import { StarRating } from "@/components/stash/star-rating";
 
 interface EntryDetailModalProps {
   entry: Entry | null;
@@ -75,7 +76,6 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
 
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
-  const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
 
   return (
     <>
@@ -113,17 +113,8 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
                 <time dateTime={entry.date.toISOString()}>{dateFormatter.format(entry.date)}</time>
               )}
               {entry.rating !== null && (
-                <div className="flex items-center gap-1" aria-label={`Rating: ${entry.rating} out of ${ratingScale} stars`}>
-                  {Array.from({ length: ratingScale }, (_, i) => i + 1).map((value) => (
-                    <Star
-                      key={value}
-                      className={cn(
-                        "size-3.5",
-                        value <= (entry.rating ?? 0) ? "fill-primary text-primary" : "text-muted-foreground"
-                      )}
-                      aria-hidden="true"
-                    />
-                  ))}
+                <div aria-label={`Rating: ${entry.rating} out of 5 stars`}>
+                  <StarRating value={entry.rating} readOnly size="sm" />
                 </div>
               )}
             </div>

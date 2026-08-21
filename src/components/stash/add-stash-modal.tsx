@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition, type ChangeEvent, type KeyboardEvent } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { Loader2, Star, Upload, X } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -17,6 +17,7 @@ import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StarRating } from "@/components/stash/star-rating";
 import {
   Dialog,
   DialogClose,
@@ -446,32 +447,14 @@ export function AddStashModal({
 
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">Rating (optional)</span>
-            <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
-              {[1, 2, 3, 4, 5].map((value) => {
-                const filled = rating !== null && value <= rating;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={rating === value}
-                    aria-label={`${value} star${value > 1 ? "s" : ""}`}
-                    onClick={() => {
-                      setRating((prev) => (prev === value ? null : value));
-                      markDirty();
-                    }}
-                    className="rounded p-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  >
-                    <Star
-                      className={cn(
-                        "size-5 transition-colors",
-                        filled ? "fill-primary text-primary" : "text-muted-foreground"
-                      )}
-                    />
-                  </button>
-                );
-              })}
-            </div>
+            <StarRating
+              value={rating}
+              onChange={(next) => {
+                setRating(next);
+                markDirty();
+              }}
+              className="rounded p-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

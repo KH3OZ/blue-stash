@@ -26,7 +26,7 @@ model Entry {
   id             String    @id @default(cuid())
   title          String
   category       Category
-  rating         Int?
+  rating         Float?
   coverUrl       String?
   externalLink   String?
   date           DateTime?

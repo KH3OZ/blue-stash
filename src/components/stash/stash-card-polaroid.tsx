@@ -33,7 +33,6 @@ export function StashCardPolaroid({
 }: StashCardPolaroidProps) {
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
-  const ratingScale = entry.rating !== null && entry.rating > 5 ? 10 : 5;
   const tilt = TILTS[index % TILTS.length];
   const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite, entry.title);
 
@@ -146,8 +145,8 @@ export function StashCardPolaroid({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {entry.rating !== null && (
               <span className="flex items-center gap-1 text-foreground">
-                <Star className="size-3 fill-primary text-primary" aria-hidden="true" />
-                {entry.rating}/{ratingScale}
+                <Star className="size-3.5 fill-primary text-primary" aria-hidden="true" />
+                {entry.rating}/5
               </span>
             )}
             {entry.date && (
