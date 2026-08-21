@@ -85,7 +85,7 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
           <DialogTitle>{entry.title}</DialogTitle>
         </DialogHeader>
 
-        <div className="-mx-6 -mt-6 flex max-h-80 items-center justify-center overflow-hidden rounded-t-4xl bg-foreground/5">
+        <div className="-mx-6 -mt-6 flex max-h-80 shrink-0 items-center justify-center overflow-hidden rounded-t-4xl bg-foreground/5">
           {entry.coverUrl ? (
             <img
               src={entry.coverUrl}
