@@ -107,4 +107,4 @@ A few things that matter in production and are easy to miss:
 
 ## License
 
-Personal project. Not currently licensed for reuse.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
