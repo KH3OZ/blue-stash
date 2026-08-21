@@ -30,6 +30,7 @@ model Entry {
   coverUrl       String?
   externalLink   String?
   date           DateTime?
+  createdAt      DateTime  @default(now())
   shortTake      String?
   deepReflection String?
   tags           String[]  @default([])

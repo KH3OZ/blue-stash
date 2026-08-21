@@ -314,7 +314,7 @@ export function AddStashModal({
   const shortTakeWordCount = countWords(shortTake);
   const shortTakeError =
     shortTakeWordCount > SHORT_TAKE_WORD_LIMIT
-      ? `over the ${SHORT_TAKE_WORD_LIMIT}-word limit.`
+      ? `over the word limit`
       : null;
   const canSave = title.trim().length > 0 && date.trim().length > 0 && !shortTakeError;
 
@@ -440,7 +440,7 @@ export function AddStashModal({
             />
             {shortTakeError && (
               <p id="stash-short-take-error" role="alert" className="text-xs text-destructive">
-                {shortTakeError} can't saved.
+                {shortTakeError}.
               </p>
             )}
           </div>

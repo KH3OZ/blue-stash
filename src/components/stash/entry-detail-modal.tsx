@@ -43,6 +43,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
 function hostnameOf(url: string) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -110,7 +116,11 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               {entry.date && (
-                <time dateTime={entry.date.toISOString()}>{dateFormatter.format(entry.date)}</time>
+                <time dateTime={entry.date.toISOString()}>
+                  {dateFormatter.format(entry.date)}
+                  {" · "}
+                  {timeFormatter.format(entry.createdAt)}
+                </time>
               )}
               {entry.rating !== null && (
                 <div aria-label={`Rating: ${entry.rating} out of 10`}>

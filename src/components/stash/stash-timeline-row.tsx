@@ -17,6 +17,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
 export function StashTimelineRow({
   entry,
   onSelect,
@@ -60,8 +66,15 @@ export function StashTimelineRow({
         </div>
       )}
 
-      <span className="w-14 shrink-0 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        {entry.date ? dateFormatter.format(entry.date) : "—"}
+      <span className="flex w-16 shrink-0 flex-col text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        {entry.date ? (
+          <>
+            <span>{dateFormatter.format(entry.date)}</span>
+            <span className="normal-case opacity-70">{timeFormatter.format(entry.createdAt)}</span>
+          </>
+        ) : (
+          "—"
+        )}
       </span>
 
       <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-foreground/5">

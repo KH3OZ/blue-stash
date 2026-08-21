@@ -32,13 +32,13 @@ export async function getEntries({
     ...(favoritesOnly ? { favorite: true } : undefined),
   };
 
-  const orderBy: Prisma.EntryOrderByWithRelationInput | undefined =
+  const orderBy: Prisma.EntryOrderByWithRelationInput[] | undefined =
     sort === "RATING"
-      ? { rating: { sort: "desc", nulls: "last" } }
+      ? [{ rating: { sort: "desc", nulls: "last" } }]
       : sort === "NEWEST"
-        ? { date: { sort: "desc", nulls: "last" } }
+        ? [{ date: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }]
         : sort === "OLDEST"
-          ? { date: { sort: "asc", nulls: "last" } }
+          ? [{ date: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }]
           : undefined;
 
   let entries = await prisma.entry.findMany({ where, orderBy });

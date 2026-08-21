@@ -20,6 +20,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
 // Deterministic per-index tilt (not Math.random) so server and client render
 // the same rotation and hydration doesn't mismatch.
 const TILTS = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"];
@@ -150,7 +156,11 @@ export function StashCardPolaroid({
               </span>
             )}
             {entry.date && (
-              <time dateTime={entry.date.toISOString()}>{dateFormatter.format(entry.date)}</time>
+              <time dateTime={entry.date.toISOString()}>
+                {dateFormatter.format(entry.date)}
+                {" · "}
+                {timeFormatter.format(entry.createdAt)}
+              </time>
             )}
           </div>
         )}
