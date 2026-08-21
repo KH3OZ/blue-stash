@@ -106,5 +106,4 @@ A few things that matter in production and are easy to miss:
 ---
 
 ## License
-
-Personal project. Not currently licensed for reuse.
+[![License: MIT](https://shields.io)](https://opensource.org)
