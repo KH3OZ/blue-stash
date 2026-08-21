@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent } from "react";
 import { ArrowUp, Archive, Loader2, Upload } from "lucide-react";
 
 import { useAddStashModal } from "@/context/add-stash-modal-context";
@@ -19,7 +19,6 @@ const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
 export function StashComposer() {
   const [value, setValue] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const { openModal, notifyError } = useAddStashModal();
@@ -28,19 +27,11 @@ export function StashComposer() {
     if (value.trim().length === 0) return;
     openModal({
       initialShortTake: value,
-      initialCoverUrl: coverUrl,
-      onSaved: () => {
-        setValue("");
-        setCoverUrl("");
-      },
+      onSaved: () => setValue(""),
     });
   }
 
-  async function handleCoverFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    event.target.value = "";
-    if (!file) return;
-
+  async function captureImage(file: File) {
     const validation = validateImageFile(
       file,
       ALLOWED_COVER_TYPES,
@@ -82,7 +73,28 @@ export function StashComposer() {
     } = supabase.storage.from("stash-covers").getPublicUrl(path);
 
     setIsUploadingCover(false);
-    setCoverUrl(publicUrl);
+    openModal({
+      initialCoverUrl: publicUrl,
+      onSaved: () => setValue(""),
+    });
+  }
+
+  async function handleCoverFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!file) return;
+    await captureImage(file);
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+    const item = Array.from(event.clipboardData.items).find(
+      (candidate) => candidate.kind === "file" && candidate.type.startsWith("image/")
+    );
+    if (!item) return;
+    const file = item.getAsFile();
+    if (!file) return;
+    event.preventDefault();
+    void captureImage(file);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -111,6 +123,7 @@ export function StashComposer() {
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           rows={3}
           placeholder={PLACEHOLDER}
           aria-label={PLACEHOLDER}
@@ -118,13 +131,6 @@ export function StashComposer() {
         />
         <div className="flex items-center justify-between px-2 pb-1">
           <div className="flex items-center gap-2">
-            {coverUrl ? (
-              <img
-                src={coverUrl}
-                alt=""
-                className="size-9 shrink-0 rounded-lg border border-border object-cover"
-              />
-            ) : null}
             <input
               ref={coverFileInputRef}
               type="file"
