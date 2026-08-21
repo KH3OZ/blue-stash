@@ -57,11 +57,6 @@ function countWords(value: string) {
   return trimmed === "" ? 0 : trimmed.split(/\s+/).length;
 }
 
-function limitWords(value: string, maxWords: number) {
-  const words = value.split(/\s+/).filter(Boolean);
-  return words.length <= maxWords ? value : words.slice(0, maxWords).join(" ");
-}
-
 const CATEGORY_HEADINGS: Record<Category, string> = {
   VIDEO: "What did you watch?",
   READING: "What did you read?",
@@ -315,7 +310,12 @@ export function AddStashModal({
 
   const titleError = touchedTitle && title.trim().length === 0 ? "Title is required." : null;
   const dateError = date.trim().length === 0 ? "Date is required." : null;
-  const canSave = title.trim().length > 0 && date.trim().length > 0;
+  const shortTakeWordCount = countWords(shortTake);
+  const shortTakeError =
+    shortTakeWordCount > SHORT_TAKE_WORD_LIMIT
+      ? `Short Take is over the ${SHORT_TAKE_WORD_LIMIT}-word limit.`
+      : null;
+  const canSave = title.trim().length > 0 && date.trim().length > 0 && !shortTakeError;
 
   function handleSave() {
     setTouchedTitle(true);
@@ -417,22 +417,31 @@ export function AddStashModal({
               <label htmlFor="stash-short-take" className="text-sm font-medium text-foreground">
                 Short Take
               </label>
-              <span id="stash-short-take-count" className="text-xs text-muted-foreground">
-                {countWords(shortTake)}/{SHORT_TAKE_WORD_LIMIT} words
+              <span
+                id="stash-short-take-count"
+                className={cn("text-xs", shortTakeError ? "text-destructive" : "text-muted-foreground")}
+              >
+                {shortTakeWordCount}/{SHORT_TAKE_WORD_LIMIT} words
               </span>
             </div>
             <textarea
               id="stash-short-take"
               value={shortTake}
               onChange={(event) => {
-                setShortTake(limitWords(event.target.value, SHORT_TAKE_WORD_LIMIT));
+                setShortTake(event.target.value);
                 markDirty();
               }}
               rows={2}
               placeholder="A quick thought..."
-              aria-describedby="stash-short-take-count"
+              aria-invalid={!!shortTakeError}
+              aria-describedby={shortTakeError ? "stash-short-take-count stash-short-take-error" : "stash-short-take-count"}
               className="w-full resize-none rounded-2xl border border-border bg-input/50 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
             />
+            {shortTakeError && (
+              <p id="stash-short-take-error" role="alert" className="text-xs text-destructive">
+                {shortTakeError} Trim it before saving.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
