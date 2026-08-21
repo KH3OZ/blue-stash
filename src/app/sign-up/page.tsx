@@ -98,15 +98,15 @@ export default function SignUpPage() {
   if (confirmationSent) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
-        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 text-center sm:p-8">
-          <h1 className="text-xl font-semibold text-foreground">Check your email</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 text-center sm:p-8 lg:max-w-md lg:p-10">
+          <h1 className="text-xl font-semibold text-foreground lg:text-2xl">Check your email</h1>
+          <p className="mt-2 text-sm text-muted-foreground lg:text-base">
             We sent a confirmation link to <span className="text-foreground">{email}</span>. Confirm your
             address to finish creating your account.
           </p>
           <Link
             href="/sign-in"
-            className="mt-6 inline-block text-sm font-medium text-foreground underline underline-offset-2 hover:text-primary"
+            className="mt-6 inline-block text-sm font-medium text-foreground underline underline-offset-2 hover:text-primary lg:text-base"
           >
             Back to sign in
           </Link>
@@ -117,13 +117,13 @@ export default function SignUpPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 sm:p-8">
-        <h1 className="text-xl font-semibold text-foreground">Create your account</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Start stashing what&rsquo;s worth keeping.</p>
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 sm:p-8 lg:max-w-md lg:p-10">
+        <h1 className="text-xl font-semibold text-foreground lg:text-2xl">Create your account</h1>
+        <p className="mt-1 text-sm text-muted-foreground lg:text-base">Start stashing what&rsquo;s worth keeping.</p>
 
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4 lg:mt-8 lg:gap-5">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="sign-up-email" className="text-sm font-medium text-foreground">
+            <label htmlFor="sign-up-email" className="text-sm font-medium text-foreground lg:text-base">
               Email
             </label>
             <Input
@@ -136,6 +136,7 @@ export default function SignUpPage() {
               placeholder="you@example.com"
               aria-invalid={email.length > 0 && !emailValid}
               aria-describedby={email.length > 0 && !emailValid ? "sign-up-email-hint" : undefined}
+              className="lg:h-11 lg:text-base"
             />
             {email.length > 0 && !emailValid && (
               <p
@@ -150,7 +151,7 @@ export default function SignUpPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="sign-up-password" className="text-sm font-medium text-foreground">
+            <label htmlFor="sign-up-password" className="text-sm font-medium text-foreground lg:text-base">
               Password
             </label>
             <Input
@@ -164,6 +165,7 @@ export default function SignUpPage() {
               placeholder="••••••••"
               aria-invalid={password.length > 0 && !passwordValid}
               aria-describedby={password.length > 0 ? "sign-up-password-requirements" : undefined}
+              className="lg:h-11 lg:text-base"
             />
             {password.length > 0 && (
               <ul id="sign-up-password-requirements" className="flex flex-col gap-1">
@@ -188,7 +190,7 @@ export default function SignUpPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="sign-up-confirm-password" className="text-sm font-medium text-foreground">
+            <label htmlFor="sign-up-confirm-password" className="text-sm font-medium text-foreground lg:text-base">
               Confirm Password
             </label>
             <Input
@@ -201,6 +203,7 @@ export default function SignUpPage() {
               placeholder="••••••••"
               aria-invalid={confirmPassword.length > 0 && !passwordsMatch}
               aria-describedby={confirmPassword.length > 0 ? "sign-up-confirm-password-hint" : undefined}
+              className="lg:h-11 lg:text-base"
             />
             {confirmPassword.length > 0 && (
               <p
@@ -227,7 +230,7 @@ export default function SignUpPage() {
             </p>
           )}
 
-          <Button type="submit" className="mt-1 w-full" disabled={isSubmitting || !canSubmit}>
+          <Button type="submit" className="mt-1 w-full lg:h-11 lg:text-base" disabled={isSubmitting || !canSubmit}>
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -239,7 +242,7 @@ export default function SignUpPage() {
           </Button>
         </form>
 
-        <div className="my-6 flex items-center gap-3">
+        <div className="my-6 flex items-center gap-3 lg:my-8">
           <div className="h-px flex-1 bg-border" />
           <span className="text-xs text-muted-foreground">or</span>
           <div className="h-px flex-1 bg-border" />
@@ -248,7 +251,7 @@ export default function SignUpPage() {
         <Button
           type="button"
           variant="outline"
-          className="w-full"
+          className="w-full lg:h-11 lg:text-base"
           onClick={handleGoogleSignIn}
           disabled={isGoogleLoading}
         >
@@ -260,7 +263,7 @@ export default function SignUpPage() {
           Continue with Google
         </Button>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className="mt-6 text-center text-sm text-muted-foreground lg:mt-8 lg:text-base">
           Already have an account?{" "}
           <Link
             href="/sign-in"
