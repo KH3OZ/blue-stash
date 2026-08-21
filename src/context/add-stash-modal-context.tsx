@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, X, XCircle } from "lucide-react";
 
 import { AddStashModal } from "@/components/stash/add-stash-modal";
 import { cn } from "@/lib/utils";
@@ -38,29 +39,87 @@ type AddStashModalContextValue = {
 
 const AddStashModalContext = createContext<AddStashModalContextValue | null>(null);
 
-type ToastState = { id: number; message: string; variant: "success" | "error" };
+type ToastState = { id: number; message: string; variant: "success" | "error"; entryId?: string };
 
-function SavedToast({ message, variant, onDismiss }: { message: string; variant: "success" | "error"; onDismiss: () => void }) {
+function SavedToast({
+  message,
+  variant,
+  entryId,
+  onDismiss,
+  onNavigate,
+}: {
+  message: string;
+  variant: "success" | "error";
+  entryId?: string;
+  onDismiss: () => void;
+  onNavigate: (entryId: string) => void;
+}) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, 3000);
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
   const Icon = variant === "error" ? XCircle : CheckCircle2;
+  const clickable = variant === "success" && Boolean(entryId);
+
+  function handleActivate() {
+    if (clickable && entryId) {
+      onNavigate(entryId);
+      onDismiss();
+    }
+  }
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed bottom-6 left-1/2 z-60 flex -translate-x-1/2 items-center gap-2 rounded-full bg-neutral-800 px-4 py-2.5 text-sm font-medium text-neutral-50 shadow-xl duration-200 animate-in fade-in-0 slide-in-from-bottom-2 dark:bg-neutral-700"
-    >
-      <Icon className={cn("size-4", variant === "error" && "text-destructive")} aria-hidden="true" />
-      {message}
+    <div className="fixed bottom-6 left-1/2 z-60 -translate-x-1/2 duration-200 animate-in fade-in-0 slide-in-from-bottom-2">
+      <div className="relative">
+        {/* Offset backing layer gives the toast a stacked, hand-placed depth
+            instead of the flat pill it used to be. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-md border border-neutral-700/50 bg-neutral-800/30 dark:border-neutral-500/40 dark:bg-neutral-600/30"
+        />
+        <div
+          role={clickable ? "button" : "status"}
+          aria-live="polite"
+          tabIndex={clickable ? 0 : undefined}
+          onClick={clickable ? handleActivate : undefined}
+          onKeyDown={
+            clickable
+              ? (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleActivate();
+                  }
+                }
+              : undefined
+          }
+          className={cn(
+            "relative flex items-center gap-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-md bg-neutral-800 py-2.5 pl-4 pr-2 text-sm font-medium text-neutral-50 shadow-xl dark:bg-neutral-700",
+            clickable &&
+              "cursor-pointer transition-colors hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-300 dark:hover:bg-neutral-600"
+          )}
+        >
+          <Icon className={cn("size-4 shrink-0", variant === "error" && "text-destructive")} aria-hidden="true" />
+          <span>{message}</span>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDismiss();
+            }}
+            className="ml-1 shrink-0 rounded-full p-1 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-50 dark:hover:bg-neutral-600"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 export function AddStashModalProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
@@ -92,7 +151,12 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
     setRefreshToken((token) => token + 1);
     toastIdRef.current += 1;
     const message = mode === "edit" ? `"${entry.title}" updated.` : `"${entry.title}" added to your stash.`;
-    setToast({ id: toastIdRef.current, message, variant: "success" });
+    setToast({
+      id: toastIdRef.current,
+      message,
+      variant: "success",
+      entryId: mode === "create" ? entry.id : undefined,
+    });
   }
 
   const notifyDeleted = useCallback((title: string) => {
@@ -147,7 +211,9 @@ export function AddStashModalProvider({ children }: { children: ReactNode }) {
           key={toast.id}
           message={toast.message}
           variant={toast.variant}
+          entryId={toast.entryId}
           onDismiss={() => setToast(null)}
+          onNavigate={(entryId) => router.push(`/wall?entry=${entryId}`)}
         />
       )}
     </AddStashModalContext.Provider>
