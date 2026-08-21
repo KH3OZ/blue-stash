@@ -50,6 +50,18 @@ const ALLOWED_COVER_TYPES: Record<string, string> = {
 };
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
+const SHORT_TAKE_WORD_LIMIT = 40;
+
+function countWords(value: string) {
+  const trimmed = value.trim();
+  return trimmed === "" ? 0 : trimmed.split(/\s+/).length;
+}
+
+function limitWords(value: string, maxWords: number) {
+  const words = value.split(/\s+/).filter(Boolean);
+  return words.length <= maxWords ? value : words.slice(0, maxWords).join(" ");
+}
+
 const CATEGORY_HEADINGS: Record<Category, string> = {
   VIDEO: "What did you watch?",
   READING: "What did you read?",
@@ -401,18 +413,24 @@ export function AddStashModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="stash-short-take" className="text-sm font-medium text-foreground">
-              Short Take
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="stash-short-take" className="text-sm font-medium text-foreground">
+                Short Take
+              </label>
+              <span id="stash-short-take-count" className="text-xs text-muted-foreground">
+                {countWords(shortTake)}/{SHORT_TAKE_WORD_LIMIT} words
+              </span>
+            </div>
             <textarea
               id="stash-short-take"
               value={shortTake}
               onChange={(event) => {
-                setShortTake(event.target.value);
+                setShortTake(limitWords(event.target.value, SHORT_TAKE_WORD_LIMIT));
                 markDirty();
               }}
               rows={2}
               placeholder="A quick thought..."
+              aria-describedby="stash-short-take-count"
               className="w-full resize-none rounded-2xl border border-border bg-input/50 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
             />
           </div>
