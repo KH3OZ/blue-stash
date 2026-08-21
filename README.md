@@ -106,4 +106,5 @@ A few things that matter in production and are easy to miss:
 ---
 
 ## License
-[![License: MIT](https://shields.io)](https://opensource.org)
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
