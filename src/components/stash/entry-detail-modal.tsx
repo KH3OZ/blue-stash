@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { ExternalLink, Loader2, Star } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 
 import { deleteEntry } from "@/app/actions/delete-entry";
 import { cn } from "@/lib/utils";
@@ -143,7 +144,7 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
                   "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs"
                 )}
               >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.deepReflection}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{entry.deepReflection}</ReactMarkdown>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No reflection added yet.</p>

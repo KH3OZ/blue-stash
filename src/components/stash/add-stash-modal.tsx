@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { Loader2, Star, Upload, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 
 import { createEntry } from "@/app/actions/create-entry";
 import { updateEntry } from "@/app/actions/update-entry";
@@ -632,7 +633,7 @@ export function AddStashModal({
                 )}
               >
                 {deepReflection.trim() ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{deepReflection}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{deepReflection}</ReactMarkdown>
                 ) : (
                   <p className="text-muted-foreground">Nothing to preview yet.</p>
                 )}
