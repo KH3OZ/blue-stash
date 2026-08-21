@@ -34,6 +34,10 @@ export function StarRating({ value, onChange, readOnly = false, size = "md", cla
   const display = value ?? 0;
 
   function commit(next: number) {
+    if (next <= 0) {
+      onChange?.(null);
+      return;
+    }
     onChange?.(next === value ? null : next);
   }
 
@@ -46,7 +50,8 @@ export function StarRating({ value, onChange, readOnly = false, size = "md", cla
 
   function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
     if (readOnly || !onChange || !draggingRef.current) return;
-    onChange(pointsFromPointer(event.currentTarget, event.clientX));
+    const next = pointsFromPointer(event.currentTarget, event.clientX);
+    onChange(next <= 0 ? null : next);
   }
 
   function handlePointerUp() {
