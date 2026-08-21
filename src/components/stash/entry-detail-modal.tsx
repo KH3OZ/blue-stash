@@ -113,7 +113,7 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
                 <time dateTime={entry.date.toISOString()}>{dateFormatter.format(entry.date)}</time>
               )}
               {entry.rating !== null && (
-                <div aria-label={`Rating: ${entry.rating} out of 5 stars`}>
+                <div aria-label={`Rating: ${entry.rating} out of 10`}>
                   <StarRating value={entry.rating} readOnly size="sm" />
                 </div>
               )}

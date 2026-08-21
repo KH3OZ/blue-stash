@@ -6,16 +6,17 @@ import { Star, StarHalf } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STAR_COUNT = 5;
-const STEP = 0.5;
+const MAX_POINTS = 10;
+const POINTS_PER_STAR = MAX_POINTS / STAR_COUNT;
 
-function clampToStep(raw: number) {
-  return Math.min(STAR_COUNT, Math.max(0, Math.round(raw / STEP) * STEP));
+function clampPoints(raw: number) {
+  return Math.min(MAX_POINTS, Math.max(0, Math.round(raw)));
 }
 
-function valueFromPointer(row: HTMLDivElement, clientX: number) {
+function pointsFromPointer(row: HTMLDivElement, clientX: number) {
   const rect = row.getBoundingClientRect();
   const ratio = (clientX - rect.left) / rect.width;
-  return clampToStep(ratio * STAR_COUNT);
+  return clampPoints(ratio * MAX_POINTS);
 }
 
 interface StarRatingProps {
@@ -40,12 +41,12 @@ export function StarRating({ value, onChange, readOnly = false, size = "md", cla
     if (readOnly || !onChange) return;
     draggingRef.current = true;
     event.currentTarget.setPointerCapture(event.pointerId);
-    commit(valueFromPointer(event.currentTarget, event.clientX));
+    commit(pointsFromPointer(event.currentTarget, event.clientX));
   }
 
   function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
     if (readOnly || !onChange || !draggingRef.current) return;
-    onChange(valueFromPointer(event.currentTarget, event.clientX));
+    onChange(pointsFromPointer(event.currentTarget, event.clientX));
   }
 
   function handlePointerUp() {
@@ -56,16 +57,16 @@ export function StarRating({ value, onChange, readOnly = false, size = "md", cla
     if (readOnly || !onChange) return;
     if (event.key === "ArrowRight" || event.key === "ArrowUp") {
       event.preventDefault();
-      onChange(clampToStep(display + STEP));
+      onChange(clampPoints(display + 1));
     } else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
       event.preventDefault();
-      onChange(display - STEP <= 0 ? null : clampToStep(display - STEP));
+      onChange(display - 1 <= 0 ? null : clampPoints(display - 1));
     } else if (event.key === "Home") {
       event.preventDefault();
       onChange(null);
     } else if (event.key === "End") {
       event.preventDefault();
-      onChange(STAR_COUNT);
+      onChange(MAX_POINTS);
     }
   }
 
@@ -76,9 +77,9 @@ export function StarRating({ value, onChange, readOnly = false, size = "md", cla
       role={readOnly ? undefined : "slider"}
       aria-label={readOnly ? undefined : "Rating"}
       aria-valuemin={readOnly ? undefined : 0}
-      aria-valuemax={readOnly ? undefined : STAR_COUNT}
+      aria-valuemax={readOnly ? undefined : MAX_POINTS}
       aria-valuenow={readOnly ? undefined : display}
-      aria-valuetext={readOnly ? undefined : value === null ? "No rating" : `${value} out of ${STAR_COUNT} stars`}
+      aria-valuetext={readOnly ? undefined : value === null ? "No rating" : `${value} out of ${MAX_POINTS}`}
       tabIndex={readOnly ? undefined : 0}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -86,9 +87,9 @@ export function StarRating({ value, onChange, readOnly = false, size = "md", cla
       onKeyDown={handleKeyDown}
     >
       {Array.from({ length: STAR_COUNT }, (_, i) => i + 1).map((position) => {
-        const raw = display - (position - 1);
-        const fill = raw >= 1 ? 1 : raw >= STEP ? STEP : 0;
-        const Icon = fill >= 1 ? Star : fill >= STEP ? StarHalf : Star;
+        const raw = display - (position - 1) * POINTS_PER_STAR;
+        const fill = raw >= POINTS_PER_STAR ? 1 : raw >= POINTS_PER_STAR / 2 ? 0.5 : 0;
+        const Icon = fill >= 1 ? Star : fill >= 0.5 ? StarHalf : Star;
         return (
           <Icon
             key={position}

@@ -146,7 +146,7 @@ export function StashCardPolaroid({
             {entry.rating !== null && (
               <span className="flex items-center gap-1 text-foreground">
                 <Star className="size-3.5 fill-primary text-primary" aria-hidden="true" />
-                {entry.rating}/5
+                {entry.rating}/10
               </span>
             )}
             {entry.date && (

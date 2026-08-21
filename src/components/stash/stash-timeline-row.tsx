@@ -119,7 +119,7 @@ export function StashTimelineRow({
         {entry.rating !== null && (
           <span className="flex items-center gap-1 text-xs text-foreground">
             <Star className="size-3.5 fill-primary text-primary" aria-hidden="true" />
-            {entry.rating}/5
+            {entry.rating}/10
           </span>
         )}
 
