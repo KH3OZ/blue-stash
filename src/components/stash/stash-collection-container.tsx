@@ -18,7 +18,7 @@ import type { NavFilter } from "@/types/category";
 import { DEFAULT_SORT, type SortOption } from "@/types/sort";
 import { DEFAULT_VIEW_MODE, type ViewMode } from "@/types/view-mode";
 
-function StashSkeleton() {
+export function StashSkeleton() {
   return (
     <div
       aria-hidden="true"
