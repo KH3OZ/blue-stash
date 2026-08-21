@@ -72,7 +72,7 @@ export function StarRating({ value, onChange, readOnly = false, size = "md", cla
   return (
     <div
       ref={rowRef}
-      className={cn("flex items-center gap-1", !readOnly && "cursor-pointer touch-none", className)}
+      className={cn("inline-flex w-fit shrink-0 items-center gap-1", !readOnly && "cursor-pointer touch-none", className)}
       role={readOnly ? undefined : "slider"}
       aria-label={readOnly ? undefined : "Rating"}
       aria-valuemin={readOnly ? undefined : 0}
