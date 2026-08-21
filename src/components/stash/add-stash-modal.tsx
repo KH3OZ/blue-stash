@@ -11,6 +11,7 @@ import { updateEntry } from "@/app/actions/update-entry";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { validateImageFile } from "@/lib/storage/validate-image-file";
+import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from "@/lib/youtube";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
@@ -501,8 +502,14 @@ export function AddStashModal({
                 type="url"
                 value={externalLink}
                 onChange={(event) => {
-                  setExternalLink(event.target.value);
+                  const nextValue = event.target.value;
+                  setExternalLink(nextValue);
                   markDirty();
+
+                  const videoId = extractYouTubeVideoId(nextValue);
+                  if (videoId) {
+                    setCoverUrl(getYouTubeThumbnailUrl(videoId));
+                  }
                 }}
                 placeholder="https://..."
               />
