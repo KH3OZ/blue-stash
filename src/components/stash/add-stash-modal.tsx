@@ -50,7 +50,7 @@ const ALLOWED_COVER_TYPES: Record<string, string> = {
 };
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
-const SHORT_TAKE_WORD_LIMIT = 40;
+const SHORT_TAKE_WORD_LIMIT = 20;
 
 function countWords(value: string) {
   const trimmed = value.trim();
