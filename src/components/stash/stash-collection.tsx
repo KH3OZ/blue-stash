@@ -20,19 +20,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
-import type { Entry } from "@/generated/prisma/client";
+import type { EntryWithMediaKind } from "@/app/actions/get-entries";
 import type { SortOption } from "@/types/sort";
 import type { ViewMode } from "@/types/view-mode";
 
 interface StashCollectionProps {
-  entries: Entry[];
+  entries: EntryWithMediaKind[];
   sort: SortOption;
   onSortChange: (sort: SortOption) => void;
   favoritesOnly: boolean;
   onFavoritesOnlyChange: (favoritesOnly: boolean) => void;
   viewMode: ViewMode;
   onViewModeChange: (viewMode: ViewMode) => void;
-  onEntrySelect: (entry: Entry) => void;
+  onEntrySelect: (entry: EntryWithMediaKind) => void;
 }
 
 export function StashCollection({
@@ -57,7 +57,7 @@ export function StashCollection({
   // activeFilter change before this component ever sees the new filter, so
   // selectionMode/selectedIds are naturally reset by the remount.
 
-  function handleCardClick(entry: Entry) {
+  function handleCardClick(entry: EntryWithMediaKind) {
     if (selectionMode) {
       setSelectedIds((prev) => {
         const next = new Set(prev);

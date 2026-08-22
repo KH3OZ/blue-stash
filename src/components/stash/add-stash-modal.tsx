@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type ChangeEvent, type KeyboardEvent } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { Film, Loader2, Music, Upload, X } from "lucide-react";
+import { AlertCircle, Film, Loader2, Music, Upload, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { validateImageFile } from "@/lib/storage/validate-image-file";
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from "@/lib/youtube";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
-import type { Entry } from "@/generated/prisma/client";
+import type { Entry, MediaType } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StarRating } from "@/components/stash/star-rating";
@@ -82,6 +82,24 @@ function getVideoDurationSeconds(file: File): Promise<number> {
   });
 }
 
+// Detects an additional-file's kind from its MIME type so it can be routed
+// to the right validator + bucket. Returns null for unsupported types.
+function classifyFile(file: File): MediaType | null {
+  if (file.type in ALLOWED_COVER_TYPES) return "IMAGE";
+  if (file.type in ALLOWED_MEDIA_TYPES) return file.type.startsWith("video/") ? "VIDEO" : "AUDIO";
+  return null;
+}
+
+interface AdditionalMediaItem {
+  id: string;
+  kind: MediaType | "UNKNOWN";
+  status: "uploading" | "done" | "error";
+  url?: string;
+  previewUrl?: string;
+  fileName: string;
+  error?: string;
+}
+
 const SHORT_TAKE_WORD_LIMIT = 20;
 
 function countWords(value: string) {
@@ -120,8 +138,7 @@ interface EntrySnapshot {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
-  additionalImageUrls: string[];
-  additionalAvMedia: MediaInput[];
+  additionalMedia: MediaInput[];
 }
 
 function snapshotFromEntry(entry: Entry): EntrySnapshot {
@@ -135,8 +152,7 @@ function snapshotFromEntry(entry: Entry): EntrySnapshot {
     shortTake: entry.shortTake,
     deepReflection: entry.deepReflection,
     tags: entry.tags,
-    additionalImageUrls: [],
-    additionalAvMedia: [],
+    additionalMedia: [],
   };
 }
 
@@ -176,21 +192,17 @@ export function AddStashModal({
 }: AddStashModalProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
-  const imagesFileInputRef = useRef<HTMLInputElement>(null);
-  const avFileInputRef = useRef<HTMLInputElement>(null);
+  const additionalFilesInputRef = useRef<HTMLInputElement>(null);
   const { notifyError } = useAddStashModal();
   const [originalSnapshot, setOriginalSnapshot] = useState<EntrySnapshot | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
-  const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [isUploadingAv, setIsUploadingAv] = useState(false);
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>(initialCategory);
   const [shortTake, setShortTake] = useState(initialShortTake);
   const [rating, setRating] = useState<number | null>(null);
   const [coverUrl, setCoverUrl] = useState("");
-  const [additionalImageUrls, setAdditionalImageUrls] = useState<string[]>([]);
-  const [additionalAvMedia, setAdditionalAvMedia] = useState<MediaInput[]>([]);
+  const [additionalMedia, setAdditionalMedia] = useState<AdditionalMediaItem[]>([]);
   const [externalLink, setExternalLink] = useState("");
   const [date, setDate] = useState(todayIso());
   const [tags, setTags] = useState<string[]>([]);
@@ -219,8 +231,7 @@ export function AddStashModal({
         setShortTake(snapshot.shortTake ?? "");
         setRating(snapshot.rating);
         setCoverUrl(snapshot.coverUrl ?? "");
-        setAdditionalImageUrls([]);
-        setAdditionalAvMedia([]);
+        setAdditionalMedia([]);
         setExternalLink(snapshot.externalLink ?? "");
         setDate(snapshot.date);
         setTags(snapshot.tags);
@@ -232,8 +243,7 @@ export function AddStashModal({
         setShortTake(initialShortTake);
         setRating(null);
         setCoverUrl(initialCoverUrl);
-        setAdditionalImageUrls([]);
-        setAdditionalAvMedia([]);
+        setAdditionalMedia([]);
         setExternalLink("");
         setDate(todayIso());
         setTags([]);
@@ -255,6 +265,8 @@ export function AddStashModal({
     const original = originalSnapshot;
     if (!original) return dirty;
 
+    const doneMedia = additionalMedia.filter((item) => item.status === "done");
+
     return (
       title.trim() !== original.title ||
       category !== original.category ||
@@ -266,33 +278,34 @@ export function AddStashModal({
       (deepReflection.trim() || null) !== original.deepReflection ||
       tags.length !== original.tags.length ||
       tags.some((tag, i) => tag !== original.tags[i]) ||
-      additionalImageUrls.length !== original.additionalImageUrls.length ||
-      additionalImageUrls.some((url, i) => url !== original.additionalImageUrls[i]) ||
-      additionalAvMedia.length !== original.additionalAvMedia.length ||
-      additionalAvMedia.some(
-        (item, i) => item.url !== original.additionalAvMedia[i]?.url || item.type !== original.additionalAvMedia[i]?.type
+      doneMedia.length !== original.additionalMedia.length ||
+      doneMedia.some(
+        (item, i) => item.url !== original.additionalMedia[i]?.url || item.kind !== original.additionalMedia[i]?.type
       )
     );
   }
 
   // Multi-media entries store their gallery in the EntryMedia table; the
   // Entry object passed in as `existingEntry` doesn't carry it, so fetch it
-  // separately when opening in edit mode.
+  // separately when opening in edit mode. By construction (see handleSave),
+  // position 0 is the cover image when coverUrl is set — everything after
+  // that (in their original interleaved order) is "additional" media.
   useEffect(() => {
     if (!open || mode !== "edit" || !existingEntry) return;
     let cancelled = false;
     getEntryMedia(existingEntry.id).then((media) => {
       if (cancelled) return;
-      const images = media.filter((item) => item.type === "IMAGE");
-      const av = media.filter((item) => item.type !== "IMAGE");
-      // Index 0 of the images mirrors coverUrl (see create-entry/update-entry); the rest are "additional".
-      const additionalImages = images.slice(1).map((item) => item.url);
-      const avMedia: MediaInput[] = av.map((item) => ({ url: item.url, type: item.type }));
-      setAdditionalImageUrls(additionalImages);
-      setAdditionalAvMedia(avMedia);
-      setOriginalSnapshot((prev) =>
-        prev ? { ...prev, additionalImageUrls: additionalImages, additionalAvMedia: avMedia } : prev
-      );
+      const additionalSource = existingEntry.coverUrl ? media.slice(1) : media;
+      const additional: AdditionalMediaItem[] = additionalSource.map((item) => ({
+        id: item.id,
+        kind: item.type,
+        status: "done",
+        url: item.url,
+        fileName: item.type === "IMAGE" ? "Image" : item.type === "VIDEO" ? "Video" : "Audio",
+      }));
+      const snapshotMedia: MediaInput[] = additional.map((item) => ({ url: item.url!, type: item.kind as MediaType }));
+      setAdditionalMedia(additional);
+      setOriginalSnapshot((prev) => (prev ? { ...prev, additionalMedia: snapshotMedia } : prev));
     });
     return () => {
       cancelled = true;
@@ -385,134 +398,106 @@ export function AddStashModal({
     markDirty();
   }
 
-  async function handleImagesFileChange(event: ChangeEvent<HTMLInputElement>) {
+  // Single entry point for the unified "Additional Files" picker: classify
+  // each selected file by MIME, then route it to the matching validator and
+  // bucket (images -> stash-covers, video/audio -> stash-media). Every file
+  // gets one list item that tracks its own upload/error state.
+  function handleAdditionalFilesChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (files.length === 0) return;
 
-    setIsUploadingImages(true);
-    const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setIsUploadingImages(false);
-      notifyError("You must be signed in to do that.");
-      return;
-    }
-
-    const uploadedUrls: string[] = [];
     for (const file of files) {
-      const validation = validateImageFile(
-        file,
-        ALLOWED_COVER_TYPES,
-        MAX_COVER_BYTES,
-        "Please choose a PNG, JPEG, WEBP, or GIF image."
-      );
-      if (!validation.valid) {
-        notifyError(validation.error!);
+      const id = crypto.randomUUID();
+      const kind = classifyFile(file);
+
+      if (!kind) {
+        setAdditionalMedia((prev) => [
+          ...prev,
+          { id, kind: "UNKNOWN", status: "error", fileName: file.name, error: "Unsupported file type." },
+        ]);
         continue;
       }
 
-      const path = `${user.id}/${crypto.randomUUID()}.${validation.extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("stash-covers")
-        .upload(path, file, { upsert: false, contentType: file.type });
-
-      if (uploadError) {
-        console.error("Image upload failed", uploadError);
-        notifyError("Something went wrong while uploading one of your images. Please try again.");
-        continue;
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("stash-covers").getPublicUrl(path);
-      uploadedUrls.push(publicUrl);
-    }
-
-    setIsUploadingImages(false);
-    if (uploadedUrls.length > 0) {
-      setAdditionalImageUrls((prev) => [...prev, ...uploadedUrls]);
+      const previewUrl = kind === "IMAGE" ? URL.createObjectURL(file) : undefined;
+      setAdditionalMedia((prev) => [...prev, { id, kind, status: "uploading", fileName: file.name, previewUrl }]);
       markDirty();
+      void uploadAdditionalFile(id, file, kind);
     }
   }
 
-  function removeAdditionalImage(url: string) {
-    setAdditionalImageUrls((prev) => prev.filter((existing) => existing !== url));
-    markDirty();
-  }
-
-  async function handleAvFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-    if (files.length === 0) return;
-
-    setIsUploadingAv(true);
+  async function uploadAdditionalFile(id: string, file: File, kind: MediaType) {
     const supabase = createClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setIsUploadingAv(false);
-      notifyError("You must be signed in to do that.");
+      setAdditionalMedia((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: "error", error: "You must be signed in to do that." } : item))
+      );
       return;
     }
 
-    const uploaded: MediaInput[] = [];
-    for (const file of files) {
-      const validation = validateImageFile(
-        file,
-        ALLOWED_MEDIA_TYPES,
-        MAX_MEDIA_BYTES,
-        "Please choose an MP4, WEBM, MOV, MP3, WAV, OGG, or M4A file."
-      );
-      if (!validation.valid) {
-        notifyError(validation.error!);
-        continue;
-      }
+    const isImage = kind === "IMAGE";
+    const bucket = isImage ? "stash-covers" : "stash-media";
+    const allowedTypes = isImage ? ALLOWED_COVER_TYPES : ALLOWED_MEDIA_TYPES;
+    const maxBytes = isImage ? MAX_COVER_BYTES : MAX_MEDIA_BYTES;
+    const typeErrorMessage = isImage
+      ? "Please choose a PNG, JPEG, WEBP, or GIF image."
+      : "Please choose an MP4, WEBM, MOV, MP3, WAV, OGG, or M4A file.";
 
-      const isVideo = file.type.startsWith("video/");
-      if (isVideo) {
-        try {
-          const duration = await getVideoDurationSeconds(file);
-          if (duration > MAX_VIDEO_DURATION_SECONDS) {
-            notifyError(`Videos must be ${MAX_VIDEO_DURATION_SECONDS} seconds or shorter.`);
-            continue;
-          }
-        } catch {
-          // Couldn't read duration metadata — don't block the upload on it.
+    const validation = validateImageFile(file, allowedTypes, maxBytes, typeErrorMessage);
+    if (!validation.valid) {
+      setAdditionalMedia((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: "error", error: validation.error! } : item))
+      );
+      return;
+    }
+
+    if (kind === "VIDEO") {
+      try {
+        const duration = await getVideoDurationSeconds(file);
+        if (duration > MAX_VIDEO_DURATION_SECONDS) {
+          setAdditionalMedia((prev) =>
+            prev.map((item) =>
+              item.id === id
+                ? { ...item, status: "error", error: `Videos must be ${MAX_VIDEO_DURATION_SECONDS} seconds or shorter.` }
+                : item
+            )
+          );
+          return;
         }
+      } catch {
+        // Couldn't read duration metadata — don't block the upload on it.
       }
-
-      const path = `${user.id}/${crypto.randomUUID()}.${validation.extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("stash-media")
-        .upload(path, file, { upsert: false, contentType: file.type });
-
-      if (uploadError) {
-        console.error("Media upload failed", uploadError);
-        notifyError("Something went wrong while uploading one of your files. Please try again.");
-        continue;
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("stash-media").getPublicUrl(path);
-      uploaded.push({ url: publicUrl, type: isVideo ? "VIDEO" : "AUDIO" });
     }
 
-    setIsUploadingAv(false);
-    if (uploaded.length > 0) {
-      setAdditionalAvMedia((prev) => [...prev, ...uploaded]);
-      markDirty();
+    const path = `${user.id}/${crypto.randomUUID()}.${validation.extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, { upsert: false, contentType: file.type });
+
+    if (uploadError) {
+      console.error("Media upload failed", uploadError);
+      setAdditionalMedia((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: "error", error: "Upload failed. Please try again." } : item))
+      );
+      return;
     }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(path);
+
+    setAdditionalMedia((prev) => prev.map((item) => (item.id === id ? { ...item, status: "done", url: publicUrl } : item)));
   }
 
-  function removeAdditionalAvMedia(url: string) {
-    setAdditionalAvMedia((prev) => prev.filter((item) => item.url !== url));
+  function removeAdditionalMediaItem(id: string) {
+    setAdditionalMedia((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((item) => item.id !== id);
+    });
     markDirty();
   }
 
@@ -523,6 +508,7 @@ export function AddStashModal({
     shortTakeWordCount > SHORT_TAKE_WORD_LIMIT
       ? `over the word limit`
       : null;
+  const isUploadingAdditional = additionalMedia.some((item) => item.status === "uploading");
   const canSave = title.trim().length > 0 && date.trim().length > 0 && !shortTakeError;
 
   function handleSave() {
@@ -530,6 +516,9 @@ export function AddStashModal({
     if (!canSave) return;
 
     const trimmedCoverUrl = coverUrl.trim();
+    const doneMedia = additionalMedia.filter(
+      (item): item is AdditionalMediaItem & { status: "done"; url: string; kind: MediaType } => item.status === "done"
+    );
     const entry: AddStashEntry = {
       title: title.trim(),
       category,
@@ -541,9 +530,9 @@ export function AddStashModal({
       deepReflection: deepReflection.trim() || null,
       tags,
       media: [
-        ...(trimmedCoverUrl ? [trimmedCoverUrl] : []),
-        ...additionalImageUrls,
-      ].map((url): MediaInput => ({ url, type: "IMAGE" })).concat(additionalAvMedia),
+        ...(trimmedCoverUrl ? [{ url: trimmedCoverUrl, type: "IMAGE" as const }] : []),
+        ...doneMedia.map((item): MediaInput => ({ url: item.url, type: item.kind })),
+      ],
     };
 
     setSaveError(null);
@@ -741,104 +730,62 @@ export function AddStashModal({
 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">Additional Images (optional)</span>
+              <span className="text-sm font-medium text-foreground">Additional Files (optional)</span>
               <input
-                ref={imagesFileInputRef}
+                ref={additionalFilesInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
+                accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/ogg,audio/mp4"
                 multiple
                 hidden
-                onChange={handleImagesFileChange}
+                onChange={handleAdditionalFilesChange}
               />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isUploadingImages}
-                onClick={() => imagesFileInputRef.current?.click()}
+                onClick={() => additionalFilesInputRef.current?.click()}
               >
-                {isUploadingImages ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                    Uploading&hellip;
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-4" aria-hidden="true" />
-                    Add images
-                  </>
-                )}
+                <Upload className="size-4" aria-hidden="true" />
+                Add files
               </Button>
             </div>
-            {additionalImageUrls.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              images, video, and audio (up to 50MB)
+            </p>
+            {additionalMedia.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {additionalImageUrls.map((url) => (
-                  <div key={url} className="relative">
-                    <img
-                      src={url}
-                      alt=""
-                      className="size-16 rounded-lg border border-border object-cover"
-                    />
-                    <button
-                      type="button"
-                      aria-label="Remove image"
-                      onClick={() => removeAdditionalImage(url)}
-                      className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border-2 border-foreground bg-secondary text-foreground transition-colors hover:border-destructive hover:text-destructive"
-                    >
-                      <X className="size-3" aria-hidden="true" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">Video / Audio (optional)</span>
-              <input
-                ref={avFileInputRef}
-                type="file"
-                accept="video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/ogg,audio/mp4"
-                multiple
-                hidden
-                onChange={handleAvFileChange}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isUploadingAv}
-                onClick={() => avFileInputRef.current?.click()}
-              >
-                {isUploadingAv ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                    Uploading&hellip;
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-4" aria-hidden="true" />
-                    Add video/audio
-                  </>
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">Videos up to 50MB and 10 seconds long. Audio up to 50MB.</p>
-            {additionalAvMedia.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {additionalAvMedia.map((item) => {
-                  const MediaIcon = item.type === "VIDEO" ? Film : Music;
+                {additionalMedia.map((item) => {
+                  const MediaIcon = item.kind === "VIDEO" ? Film : item.kind === "AUDIO" ? Music : AlertCircle;
+                  const showImagePreview = item.kind === "IMAGE" && (item.previewUrl || item.url);
                   return (
                     <div
-                      key={item.url}
-                      className="relative flex size-16 items-center justify-center rounded-lg border border-border bg-foreground/5"
+                      key={item.id}
+                      className={cn(
+                        "relative flex size-16 items-center justify-center overflow-hidden rounded-lg border bg-foreground/5",
+                        item.status === "error" ? "border-destructive" : "border-border"
+                      )}
                     >
-                      <MediaIcon className="size-6 text-foreground/50" aria-hidden="true" />
+                      {showImagePreview ? (
+                        <img
+                          src={item.previewUrl ?? item.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <MediaIcon
+                          className={cn("size-6", item.status === "error" ? "text-destructive" : "text-foreground/50")}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {item.status === "uploading" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                          <Loader2 className="size-4 animate-spin text-foreground/60" aria-hidden="true" />
+                        </div>
+                      )}
                       <button
                         type="button"
-                        aria-label={item.type === "VIDEO" ? "Remove video" : "Remove audio"}
-                        onClick={() => removeAdditionalAvMedia(item.url)}
+                        aria-label={`Remove ${item.fileName}`}
+                        onClick={() => removeAdditionalMediaItem(item.id)}
                         className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border-2 border-foreground bg-secondary text-foreground transition-colors hover:border-destructive hover:text-destructive"
                       >
                         <X className="size-3" aria-hidden="true" />
@@ -847,6 +794,17 @@ export function AddStashModal({
                   );
                 })}
               </div>
+            )}
+            {additionalMedia.some((item) => item.status === "error") && (
+              <ul className="flex flex-col gap-0.5">
+                {additionalMedia
+                  .filter((item) => item.status === "error")
+                  .map((item) => (
+                    <li key={item.id} role="alert" className="text-xs text-destructive">
+                      {item.fileName}: {item.error}
+                    </li>
+                  ))}
+              </ul>
             )}
           </div>
 
@@ -987,7 +945,7 @@ export function AddStashModal({
           >
             Cancel
           </DialogClose>
-          <Button type="button" onClick={handleSave} disabled={!canSave || isSaving}>
+          <Button type="button" onClick={handleSave} disabled={!canSave || isSaving || isUploadingAdditional}>
             {isSaving ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -1000,6 +958,9 @@ export function AddStashModal({
             )}
           </Button>
         </DialogFooter>
+        {isUploadingAdditional && !saveError && (
+          <p className="text-right text-xs text-muted-foreground">Waiting for files to finish uploading&hellip;</p>
+        )}
         {saveError && (
           <p role="alert" className="text-right text-xs text-destructive">
             {saveError}

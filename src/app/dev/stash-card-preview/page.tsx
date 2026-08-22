@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { EntryDetailModal } from "@/components/stash/entry-detail-modal";
 import { StashCollection } from "@/components/stash/stash-collection";
+import type { EntryWithMediaKind } from "@/app/actions/get-entries";
 import type { Entry } from "@/generated/prisma/client";
 import { DEFAULT_SORT, type SortOption } from "@/types/sort";
 import { DEFAULT_VIEW_MODE, type ViewMode } from "@/types/view-mode";
@@ -110,9 +111,10 @@ const mockEntriesBase: Omit<Entry, "userId">[] = [
   },
 ];
 
-const mockEntries: Entry[] = mockEntriesBase.map((entry) => ({
+const mockEntries: EntryWithMediaKind[] = mockEntriesBase.map((entry) => ({
   ...entry,
   userId: "00000000-0000-0000-0000-000000000000",
+  mediaKind: null,
 }));
 
 export default function StashCardPreviewPage() {

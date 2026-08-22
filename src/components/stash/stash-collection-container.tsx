@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Archive } from "lucide-react";
 
-import { getEntries } from "@/app/actions/get-entries";
+import { getEntries, type EntryWithMediaKind } from "@/app/actions/get-entries";
 import { getEntry } from "@/app/actions/get-entry";
 import { EntryDetailModal } from "@/components/stash/entry-detail-modal";
 import { StashCollection } from "@/components/stash/stash-collection";
@@ -37,7 +37,7 @@ export function StashCollectionContainer() {
   const { refreshToken, notifyError } = useAddStashModal();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [entries, setEntries] = useState<EntryWithMediaKind[] | null>(null);
   const [loadedFilter, setLoadedFilter] = useState<NavFilter | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sort, setSort] = useState<SortOption>(DEFAULT_SORT);

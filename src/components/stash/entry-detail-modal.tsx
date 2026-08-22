@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2, Music } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -10,7 +10,7 @@ import { deleteEntry } from "@/app/actions/delete-entry";
 import { getEntryMedia } from "@/app/actions/get-entry-media";
 import { cn } from "@/lib/utils";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
-import type { Entry } from "@/generated/prisma/client";
+import type { Entry, MediaType } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -70,7 +70,10 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
-  const [imageRecord, setImageRecord] = useState<{ entryId: string; urls: string[] } | null>(null);
+  const [mediaRecord, setMediaRecord] = useState<{
+    entryId: string;
+    items: { url: string; type: MediaType }[];
+  } | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
@@ -80,7 +83,7 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
     let cancelled = false;
     getEntryMedia(entryId).then((media) => {
       if (!cancelled) {
-        setImageRecord({ entryId, urls: media.map((item) => item.url) });
+        setMediaRecord({ entryId, items: media.map((item) => ({ url: item.url, type: item.type })) });
       }
     });
     return () => {
@@ -90,11 +93,16 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
 
   if (!entry) return null;
 
-  // Multi-image entries use the EntryMedia table (fetched above, keyed by
-  // entryId to avoid showing a stale entry's images); entries created before
-  // multi-image support fall back to the single coverUrl.
-  const entryMediaUrls = imageRecord?.entryId === entryId ? imageRecord.urls : [];
-  const displayImageUrls = entryMediaUrls.length > 0 ? entryMediaUrls : entry.coverUrl ? [entry.coverUrl] : [];
+  // Multi-media entries use the EntryMedia table (fetched above, keyed by
+  // entryId to avoid showing a stale entry's media); entries created before
+  // multi-media support fall back to the single coverUrl (always an image).
+  const entryMediaItems = mediaRecord?.entryId === entryId ? mediaRecord.items : [];
+  const displayMedia =
+    entryMediaItems.length > 0
+      ? entryMediaItems
+      : entry.coverUrl
+        ? [{ url: entry.coverUrl, type: "IMAGE" as MediaType }]
+        : [];
 
   function openLightbox(index: number) {
     setLightboxIndex(index);
@@ -118,6 +126,37 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
 
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
+  const entryTitle = entry.title;
+
+  function renderMediaItem(item: { url: string; type: MediaType }, index: number) {
+    if (item.type === "IMAGE") {
+      return (
+        <button
+          type="button"
+          onClick={() => openLightbox(index)}
+          aria-label={
+            displayMedia.length > 1
+              ? `View full-size image ${index + 1} of ${displayMedia.length} for ${entryTitle}`
+              : `View full-size image for ${entryTitle}`
+          }
+          className="flex max-h-80 w-full cursor-zoom-in items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+        >
+          <img src={item.url} alt={entryTitle} className="max-h-80 w-full object-contain" />
+        </button>
+      );
+    }
+
+    if (item.type === "VIDEO") {
+      return <video controls src={item.url} className="max-h-80 w-full object-contain" />;
+    }
+
+    return (
+      <div className="flex h-56 w-full flex-col items-center justify-center gap-3 px-8">
+        <Music className="size-10 text-foreground/30" aria-hidden="true" />
+        <audio controls src={item.url} className="w-full" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -128,42 +167,24 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
         </DialogHeader>
 
         <div className="-mx-6 -mt-6 max-h-80 shrink-0 overflow-hidden rounded-t-4xl bg-foreground/5">
-          {displayImageUrls.length > 1 ? (
+          {displayMedia.length > 1 ? (
             <Carousel className="w-full">
               <CarouselContent className="ml-0">
-                {displayImageUrls.map((url, index) => (
+                {displayMedia.map((item, index) => (
                   <CarouselItem
-                    key={url + index}
+                    key={item.url + index}
                     className="pl-0"
-                    aria-label={`Image ${index + 1} of ${displayImageUrls.length}`}
+                    aria-label={`Item ${index + 1} of ${displayMedia.length}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => openLightbox(index)}
-                      aria-label={`View full-size image ${index + 1} of ${displayImageUrls.length} for ${entry.title}`}
-                      className="flex max-h-80 w-full cursor-zoom-in items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-                    >
-                      <img src={url} alt={entry.title} className="max-h-80 w-full object-contain" />
-                    </button>
+                    {renderMediaItem(item, index)}
                   </CarouselItem>
                 ))}
               </CarouselContent>
               <CarouselPrevious className="left-2 border-2 border-foreground bg-secondary text-foreground hover:border-primary hover:text-primary" />
               <CarouselNext className="right-2 border-2 border-foreground bg-secondary text-foreground hover:border-primary hover:text-primary" />
             </Carousel>
-          ) : displayImageUrls.length === 1 ? (
-            <button
-              type="button"
-              onClick={() => openLightbox(0)}
-              aria-label={`View full-size image for ${entry.title}`}
-              className="flex max-h-80 w-full cursor-zoom-in items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-            >
-              <img
-                src={displayImageUrls[0]}
-                alt={entry.title}
-                className="max-h-80 w-full object-contain"
-              />
-            </button>
+          ) : displayMedia.length === 1 ? (
+            renderMediaItem(displayMedia[0], 0)
           ) : (
             <div className="flex h-56 w-full items-center justify-center" aria-hidden="true">
               <CategoryIcon className="size-14 text-foreground/20" />
@@ -302,17 +323,17 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
       </AlertDialogContent>
     </AlertDialog>
 
-    {displayImageUrls[lightboxIndex] && (
+    {displayMedia[lightboxIndex]?.type === "IMAGE" && (
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent
-          showCloseButton
-          className="w-fit max-w-[95vw] gap-0 rounded-none border-none bg-transparent p-0 shadow-none ring-0"
+          showCloseButton={false}
+          className="w-fit max-w-[95vw] gap-0 rounded-none border-none bg-transparent p-0 shadow-none ring-0 sm:max-w-[95vw]"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{entry.title} — full-size image</DialogTitle>
           </DialogHeader>
           <img
-            src={displayImageUrls[lightboxIndex]}
+            src={displayMedia[lightboxIndex].url}
             alt={entry.title}
             className="max-h-[95vh] max-w-[95vw] object-contain"
           />

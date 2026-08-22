@@ -2,9 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/supabase/get-current-user";
-import type { Entry, Prisma } from "@/generated/prisma/client";
+import type { Entry, MediaType, Prisma } from "@/generated/prisma/client";
 import type { NavFilter } from "@/types/category";
 import { DEFAULT_SORT, type SortOption } from "@/types/sort";
+
+export type EntryWithMediaKind = Entry & { mediaKind: MediaType | null };
 
 export type GetEntriesParams = {
   category: NavFilter;
@@ -18,7 +20,7 @@ export async function getEntries({
   search = "",
   sort = DEFAULT_SORT,
   favoritesOnly = false,
-}: GetEntriesParams): Promise<Entry[]> {
+}: GetEntriesParams): Promise<EntryWithMediaKind[]> {
   let userId: string;
   try {
     userId = await getCurrentUserId();
@@ -60,5 +62,22 @@ export async function getEntries({
     );
   }
 
-  return entries;
+  // For entries with no cover image, look up whether they have video/audio
+  // media so the wall view can show a type-specific icon instead of the
+  // generic category icon. Cheap: only queried for coverless entries.
+  const coverlessIds = entries.filter((entry) => !entry.coverUrl).map((entry) => entry.id);
+  const mediaKindByEntryId = new Map<string, MediaType>();
+  if (coverlessIds.length > 0) {
+    const firstMedia = await prisma.entryMedia.findMany({
+      where: { entryId: { in: coverlessIds }, userId, type: { in: ["VIDEO", "AUDIO"] } },
+      orderBy: { position: "asc" },
+      distinct: ["entryId"],
+      select: { entryId: true, type: true },
+    });
+    for (const item of firstMedia) {
+      mediaKindByEntryId.set(item.entryId, item.type);
+    }
+  }
+
+  return entries.map((entry) => ({ ...entry, mediaKind: mediaKindByEntryId.get(entry.id) ?? null }));
 }

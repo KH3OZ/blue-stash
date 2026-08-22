@@ -1,13 +1,13 @@
-import { Check, ExternalLink, Heart, Star } from "lucide-react";
+import { Check, ExternalLink, Film, Heart, Music, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { CATEGORY_ICONS, CATEGORY_LABELS, type Category } from "@/types/category";
-import type { Entry } from "@/generated/prisma/client";
+import type { EntryWithMediaKind } from "@/app/actions/get-entries";
 
 interface StashTimelineRowProps {
-  entry: Entry;
-  onSelect: (entry: Entry) => void;
+  entry: EntryWithMediaKind;
+  onSelect: (entry: EntryWithMediaKind) => void;
   selectionMode?: boolean;
   selected?: boolean;
 }
@@ -31,6 +31,7 @@ export function StashTimelineRow({
 }: StashTimelineRowProps) {
   const category = entry.category as Category;
   const CategoryIcon = CATEGORY_ICONS[category];
+  const FallbackIcon = entry.mediaKind === "VIDEO" ? Film : entry.mediaKind === "AUDIO" ? Music : CategoryIcon;
   const { favorite, toggle } = useFavoriteToggle(entry.id, entry.favorite, entry.title);
 
   return (
@@ -87,7 +88,7 @@ export function StashTimelineRow({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center" aria-hidden="true">
-            <CategoryIcon className="size-6 text-foreground/20" />
+            <FallbackIcon className="size-6 text-foreground/20" />
           </div>
         )}
       </div>
