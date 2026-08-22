@@ -305,7 +305,7 @@ export function HeaderSearchTypeahead() {
                           : "hover:scale-[1.02] hover:bg-accent"
                       )}
                     >
-                      See more ({currentResults.length})
+                      See more ({currentResults.length - RESULT_LIMIT})
                     </button>
                   </li>
                 )}
