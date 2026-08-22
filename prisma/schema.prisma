@@ -36,6 +36,20 @@ model Entry {
   tags           String[]  @default([])
   favorite       Boolean   @default(false)
   userId         String    @db.Uuid
+  images         EntryImage[]
 
+  @@index([userId])
+}
+
+model EntryImage {
+  id        String   @id @default(cuid())
+  entryId   String
+  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid
+  url       String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([entryId])
   @@index([userId])
 }

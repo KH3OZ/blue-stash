@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition, type ChangeEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type ChangeEvent, type KeyboardEvent } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { Loader2, Upload, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +9,7 @@ import remarkBreaks from "remark-breaks";
 
 import { createEntry } from "@/app/actions/create-entry";
 import { updateEntry } from "@/app/actions/update-entry";
+import { getEntryImages } from "@/app/actions/get-entry-images";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { validateImageFile } from "@/lib/storage/validate-image-file";
@@ -89,6 +90,7 @@ interface EntrySnapshot {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
+  additionalImageUrls: string[];
 }
 
 function snapshotFromEntry(entry: Entry): EntrySnapshot {
@@ -102,6 +104,7 @@ function snapshotFromEntry(entry: Entry): EntrySnapshot {
     shortTake: entry.shortTake,
     deepReflection: entry.deepReflection,
     tags: entry.tags,
+    additionalImageUrls: [],
   };
 }
 
@@ -115,6 +118,7 @@ export interface AddStashEntry {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
+  images: string[];
 }
 
 interface AddStashModalProps {
@@ -140,15 +144,18 @@ export function AddStashModal({
 }: AddStashModalProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const imagesFileInputRef = useRef<HTMLInputElement>(null);
   const { notifyError } = useAddStashModal();
   const [originalSnapshot, setOriginalSnapshot] = useState<EntrySnapshot | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>(initialCategory);
   const [shortTake, setShortTake] = useState(initialShortTake);
   const [rating, setRating] = useState<number | null>(null);
   const [coverUrl, setCoverUrl] = useState("");
+  const [additionalImageUrls, setAdditionalImageUrls] = useState<string[]>([]);
   const [externalLink, setExternalLink] = useState("");
   const [date, setDate] = useState(todayIso());
   const [tags, setTags] = useState<string[]>([]);
@@ -177,6 +184,7 @@ export function AddStashModal({
         setShortTake(snapshot.shortTake ?? "");
         setRating(snapshot.rating);
         setCoverUrl(snapshot.coverUrl ?? "");
+        setAdditionalImageUrls([]);
         setExternalLink(snapshot.externalLink ?? "");
         setDate(snapshot.date);
         setTags(snapshot.tags);
@@ -188,6 +196,7 @@ export function AddStashModal({
         setShortTake(initialShortTake);
         setRating(null);
         setCoverUrl(initialCoverUrl);
+        setAdditionalImageUrls([]);
         setExternalLink("");
         setDate(todayIso());
         setTags([]);
@@ -219,9 +228,29 @@ export function AddStashModal({
       (shortTake.trim() || null) !== original.shortTake ||
       (deepReflection.trim() || null) !== original.deepReflection ||
       tags.length !== original.tags.length ||
-      tags.some((tag, i) => tag !== original.tags[i])
+      tags.some((tag, i) => tag !== original.tags[i]) ||
+      additionalImageUrls.length !== original.additionalImageUrls.length ||
+      additionalImageUrls.some((url, i) => url !== original.additionalImageUrls[i])
     );
   }
+
+  // Multi-image entries store their gallery in the EntryImage table; the
+  // Entry object passed in as `existingEntry` doesn't carry it, so fetch it
+  // separately when opening in edit mode.
+  useEffect(() => {
+    if (!open || mode !== "edit" || !existingEntry) return;
+    let cancelled = false;
+    getEntryImages(existingEntry.id).then((images) => {
+      if (cancelled) return;
+      // Index 0 mirrors coverUrl (see create-entry/update-entry); the rest are "additional".
+      const additional = images.slice(1).map((image) => image.url);
+      setAdditionalImageUrls(additional);
+      setOriginalSnapshot((prev) => (prev ? { ...prev, additionalImageUrls: additional } : prev));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mode, existingEntry]);
 
   function handleOpenChange(nextOpen: boolean, eventDetails: DialogPrimitive.Root.ChangeEventDetails) {
     if (nextOpen) {
@@ -309,6 +338,65 @@ export function AddStashModal({
     markDirty();
   }
 
+  async function handleImagesFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    setIsUploadingImages(true);
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setIsUploadingImages(false);
+      notifyError("You must be signed in to do that.");
+      return;
+    }
+
+    const uploadedUrls: string[] = [];
+    for (const file of files) {
+      const validation = validateImageFile(
+        file,
+        ALLOWED_COVER_TYPES,
+        MAX_COVER_BYTES,
+        "Please choose a PNG, JPEG, WEBP, or GIF image."
+      );
+      if (!validation.valid) {
+        notifyError(validation.error!);
+        continue;
+      }
+
+      const path = `${user.id}/${crypto.randomUUID()}.${validation.extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("stash-covers")
+        .upload(path, file, { upsert: false, contentType: file.type });
+
+      if (uploadError) {
+        console.error("Image upload failed", uploadError);
+        notifyError("Something went wrong while uploading one of your images. Please try again.");
+        continue;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("stash-covers").getPublicUrl(path);
+      uploadedUrls.push(publicUrl);
+    }
+
+    setIsUploadingImages(false);
+    if (uploadedUrls.length > 0) {
+      setAdditionalImageUrls((prev) => [...prev, ...uploadedUrls]);
+      markDirty();
+    }
+  }
+
+  function removeAdditionalImage(url: string) {
+    setAdditionalImageUrls((prev) => prev.filter((existing) => existing !== url));
+    markDirty();
+  }
+
   const titleError = touchedTitle && title.trim().length === 0 ? "Title is required." : null;
   const dateError = date.trim().length === 0 ? "Date is required." : null;
   const shortTakeWordCount = countWords(shortTake);
@@ -322,16 +410,18 @@ export function AddStashModal({
     setTouchedTitle(true);
     if (!canSave) return;
 
+    const trimmedCoverUrl = coverUrl.trim();
     const entry: AddStashEntry = {
       title: title.trim(),
       category,
       rating,
-      coverUrl: coverUrl.trim() || null,
+      coverUrl: trimmedCoverUrl || null,
       externalLink: externalLink.trim() || null,
       date: new Date(date),
       shortTake: shortTake.trim() || null,
       deepReflection: deepReflection.trim() || null,
       tags,
+      images: trimmedCoverUrl ? [trimmedCoverUrl, ...additionalImageUrls] : additionalImageUrls,
     };
 
     setSaveError(null);
@@ -525,6 +615,60 @@ export function AddStashModal({
                 placeholder="https://..."
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">Additional Images (optional)</span>
+              <input
+                ref={imagesFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                multiple
+                hidden
+                onChange={handleImagesFileChange}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isUploadingImages}
+                onClick={() => imagesFileInputRef.current?.click()}
+              >
+                {isUploadingImages ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Uploading&hellip;
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-4" aria-hidden="true" />
+                    Add images
+                  </>
+                )}
+              </Button>
+            </div>
+            {additionalImageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {additionalImageUrls.map((url) => (
+                  <div key={url} className="relative">
+                    <img
+                      src={url}
+                      alt=""
+                      className="size-16 rounded-lg border border-border object-cover"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Remove image"
+                      onClick={() => removeAdditionalImage(url)}
+                      className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border-2 border-foreground bg-secondary text-foreground transition-colors hover:border-destructive hover:text-destructive"
+                    >
+                      <X className="size-3" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">

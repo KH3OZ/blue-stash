@@ -1,0 +1,50 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "BlueStash" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e10]:
+        - combobox "Search your stash" [ref=e13]
+        - button "Add Stash" [ref=e14]
+    - generic [ref=e16]:
+      - generic [ref=e19]:
+        - button "Toggle Sidebar" [ref=e21]
+        - list [ref=e26]:
+          - listitem [ref=e27]:
+            - button "All" [ref=e28]
+          - listitem [ref=e35]:
+            - button "Video" [ref=e36]
+          - listitem [ref=e43]:
+            - button "Reading" [ref=e44]
+          - listitem [ref=e48]:
+            - button "Gaming" [ref=e49]
+          - listitem [ref=e53]:
+            - button "Audio" [ref=e54]
+          - listitem [ref=e58]:
+            - button "Life Moments" [ref=e59]
+          - listitem [ref=e64]:
+            - button "Events" [ref=e65]
+          - listitem [ref=e69]:
+            - button "Films" [ref=e70]
+      - main [ref=e74]:
+        - main [ref=e75]:
+          - generic [ref=e77]:
+            - heading "Welcome back" [level=1] [ref=e78]
+            - paragraph [ref=e79]: Sign in to keep your memory.
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - generic [ref=e82]: Email
+                - textbox "Email" [ref=e83]:
+                  - /placeholder: you@example.com
+              - generic [ref=e84]:
+                - generic [ref=e85]: Password
+                - textbox "Password" [ref=e86]:
+                  - /placeholder: ••••••••
+              - button "Sign In" [ref=e87]
+            - generic [ref=e88]: or
+            - button "Continue with Google" [ref=e92]
+            - paragraph [ref=e93]:
+              - text: Don’t have an account?
+              - link "Sign up" [ref=e94] [cursor=pointer]:
+                - /url: /sign-up
+  - alert [ref=e95]

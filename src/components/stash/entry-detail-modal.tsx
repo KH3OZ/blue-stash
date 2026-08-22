@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
 import { deleteEntry } from "@/app/actions/delete-entry";
+import { getEntryImages } from "@/app/actions/get-entry-images";
 import { cn } from "@/lib/utils";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
@@ -18,6 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,8 +70,36 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [imageRecord, setImageRecord] = useState<{ entryId: string; urls: string[] } | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const entryId = entry?.id ?? null;
+  useEffect(() => {
+    if (!open || !entryId) return;
+    let cancelled = false;
+    getEntryImages(entryId).then((images) => {
+      if (!cancelled) {
+        setImageRecord({ entryId, urls: images.map((image) => image.url) });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, entryId]);
 
   if (!entry) return null;
+
+  // Multi-image entries use the EntryImage table (fetched above, keyed by
+  // entryId to avoid showing a stale entry's images); entries created before
+  // multi-image support fall back to the single coverUrl.
+  const entryImageUrls = imageRecord?.entryId === entryId ? imageRecord.urls : [];
+  const displayImageUrls = entryImageUrls.length > 0 ? entryImageUrls : entry.coverUrl ? [entry.coverUrl] : [];
+
+  function openLightbox(index: number) {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  }
 
   function handleConfirmDelete() {
     if (!entry) return;
@@ -91,13 +127,43 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
           <DialogTitle>{entry.title}</DialogTitle>
         </DialogHeader>
 
-        <div className="-mx-6 -mt-6 flex max-h-80 shrink-0 items-center justify-center overflow-hidden rounded-t-4xl bg-foreground/5">
-          {entry.coverUrl ? (
-            <img
-              src={entry.coverUrl}
-              alt={entry.title}
-              className="max-h-80 w-full object-contain"
-            />
+        <div className="-mx-6 -mt-6 max-h-80 shrink-0 overflow-hidden rounded-t-4xl bg-foreground/5">
+          {displayImageUrls.length > 1 ? (
+            <Carousel className="w-full">
+              <CarouselContent className="ml-0">
+                {displayImageUrls.map((url, index) => (
+                  <CarouselItem
+                    key={url + index}
+                    className="pl-0"
+                    aria-label={`Image ${index + 1} of ${displayImageUrls.length}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openLightbox(index)}
+                      aria-label={`View full-size image ${index + 1} of ${displayImageUrls.length} for ${entry.title}`}
+                      className="flex max-h-80 w-full cursor-zoom-in items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <img src={url} alt={entry.title} className="max-h-80 w-full object-contain" />
+                    </button>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-2 border-2 border-foreground bg-secondary text-foreground hover:border-primary hover:text-primary" />
+              <CarouselNext className="right-2 border-2 border-foreground bg-secondary text-foreground hover:border-primary hover:text-primary" />
+            </Carousel>
+          ) : displayImageUrls.length === 1 ? (
+            <button
+              type="button"
+              onClick={() => openLightbox(0)}
+              aria-label={`View full-size image for ${entry.title}`}
+              className="flex max-h-80 w-full cursor-zoom-in items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+            >
+              <img
+                src={displayImageUrls[0]}
+                alt={entry.title}
+                className="max-h-80 w-full object-contain"
+              />
+            </button>
           ) : (
             <div className="flex h-56 w-full items-center justify-center" aria-hidden="true">
               <CategoryIcon className="size-14 text-foreground/20" />
@@ -235,6 +301,24 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    {displayImageUrls[lightboxIndex] && (
+      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+        <DialogContent
+          showCloseButton
+          className="w-fit max-w-[95vw] gap-0 rounded-none border-none bg-transparent p-0 shadow-none ring-0"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>{entry.title} — full-size image</DialogTitle>
+          </DialogHeader>
+          <img
+            src={displayImageUrls[lightboxIndex]}
+            alt={entry.title}
+            className="max-h-[95vh] max-w-[95vw] object-contain"
+          />
+        </DialogContent>
+      </Dialog>
+    )}
     </>
   );
 }

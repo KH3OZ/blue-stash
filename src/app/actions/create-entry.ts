@@ -17,6 +17,7 @@ export interface CreateEntryInput {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
+  images: string[];
 }
 
 export type CreateEntryResult = { success: true; entry: Entry } | { success: false; error: string };
@@ -43,20 +44,32 @@ export async function createEntry(input: CreateEntryInput): Promise<CreateEntryR
     return { success: false, error: error instanceof Error ? error.message : "You must be signed in to do that." };
   }
 
+  const images = (input.images ?? []).map((url) => url.trim()).filter(Boolean);
+
   try {
-    const entry = await prisma.entry.create({
-      data: {
-        title,
-        category: input.category,
-        rating: input.rating ?? null,
-        coverUrl: input.coverUrl?.trim() || null,
-        externalLink: input.externalLink?.trim() || null,
-        date,
-        shortTake: input.shortTake?.trim() || null,
-        deepReflection: input.deepReflection?.trim() || null,
-        tags: input.tags ?? [],
-        userId,
-      },
+    const entry = await prisma.$transaction(async (tx) => {
+      const created = await tx.entry.create({
+        data: {
+          title,
+          category: input.category,
+          rating: input.rating ?? null,
+          coverUrl: input.coverUrl?.trim() || null,
+          externalLink: input.externalLink?.trim() || null,
+          date,
+          shortTake: input.shortTake?.trim() || null,
+          deepReflection: input.deepReflection?.trim() || null,
+          tags: input.tags ?? [],
+          userId,
+        },
+      });
+
+      if (images.length > 0) {
+        await tx.entryImage.createMany({
+          data: images.map((url, position) => ({ entryId: created.id, userId, url, position })),
+        });
+      }
+
+      return created;
     });
 
     revalidatePath("/wall");

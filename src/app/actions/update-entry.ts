@@ -17,6 +17,7 @@ export interface UpdateEntryInput {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
+  images: string[];
 }
 
 export type UpdateEntryResult = { success: true; entry: Entry } | { success: false; error: string };
@@ -51,20 +52,33 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
     return { success: false, error: "You don't have permission to modify this entry." };
   }
 
+  const images = (input.images ?? []).map((url) => url.trim()).filter(Boolean);
+
   try {
-    const entry = await prisma.entry.update({
-      where: { id, userId },
-      data: {
-        title,
-        category: input.category,
-        rating: input.rating ?? null,
-        coverUrl: input.coverUrl?.trim() || null,
-        externalLink: input.externalLink?.trim() || null,
-        date,
-        shortTake: input.shortTake?.trim() || null,
-        deepReflection: input.deepReflection?.trim() || null,
-        tags: input.tags ?? [],
-      },
+    const entry = await prisma.$transaction(async (tx) => {
+      const updated = await tx.entry.update({
+        where: { id, userId },
+        data: {
+          title,
+          category: input.category,
+          rating: input.rating ?? null,
+          coverUrl: input.coverUrl?.trim() || null,
+          externalLink: input.externalLink?.trim() || null,
+          date,
+          shortTake: input.shortTake?.trim() || null,
+          deepReflection: input.deepReflection?.trim() || null,
+          tags: input.tags ?? [],
+        },
+      });
+
+      await tx.entryImage.deleteMany({ where: { entryId: id, userId } });
+      if (images.length > 0) {
+        await tx.entryImage.createMany({
+          data: images.map((url, position) => ({ entryId: id, userId, url, position })),
+        });
+      }
+
+      return updated;
     });
 
     revalidatePath("/wall");
