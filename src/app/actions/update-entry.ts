@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/supabase/get-current-user";
 import { CATEGORIES, type Category } from "@/types/category";
 import type { Entry } from "@/generated/prisma/client";
+import type { MediaInput } from "./create-entry";
 
 export interface UpdateEntryInput {
   title: string;
@@ -17,7 +18,7 @@ export interface UpdateEntryInput {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
-  images: string[];
+  media: MediaInput[];
 }
 
 export type UpdateEntryResult = { success: true; entry: Entry } | { success: false; error: string };
@@ -52,7 +53,9 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
     return { success: false, error: "You don't have permission to modify this entry." };
   }
 
-  const images = (input.images ?? []).map((url) => url.trim()).filter(Boolean);
+  const media = (input.media ?? [])
+    .map((item) => ({ url: item.url.trim(), type: item.type }))
+    .filter((item) => item.url.length > 0);
 
   try {
     const entry = await prisma.$transaction(async (tx) => {
@@ -71,10 +74,16 @@ export async function updateEntry(id: string, input: UpdateEntryInput): Promise<
         },
       });
 
-      await tx.entryImage.deleteMany({ where: { entryId: id, userId } });
-      if (images.length > 0) {
-        await tx.entryImage.createMany({
-          data: images.map((url, position) => ({ entryId: id, userId, url, position })),
+      await tx.entryMedia.deleteMany({ where: { entryId: id, userId } });
+      if (media.length > 0) {
+        await tx.entryMedia.createMany({
+          data: media.map((item, position) => ({
+            entryId: id,
+            userId,
+            url: item.url,
+            type: item.type,
+            position,
+          })),
         });
       }
 

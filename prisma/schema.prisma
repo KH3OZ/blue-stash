@@ -22,6 +22,12 @@ enum Category {
   FILMS
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
 model Entry {
   id             String    @id @default(cuid())
   title          String
@@ -36,19 +42,20 @@ model Entry {
   tags           String[]  @default([])
   favorite       Boolean   @default(false)
   userId         String    @db.Uuid
-  images         EntryImage[]
+  media          EntryMedia[]
 
   @@index([userId])
 }
 
-model EntryImage {
-  id        String   @id @default(cuid())
+model EntryMedia {
+  id        String    @id @default(cuid())
   entryId   String
-  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  userId    String   @db.Uuid
+  entry     Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  userId    String    @db.Uuid
+  type      MediaType @default(IMAGE)
   url       String
-  position  Int      @default(0)
-  createdAt DateTime @default(now())
+  position  Int       @default(0)
+  createdAt DateTime  @default(now())
 
   @@index([entryId])
   @@index([userId])

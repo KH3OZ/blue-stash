@@ -5,7 +5,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/supabase/get-current-user";
 import { CATEGORIES, type Category } from "@/types/category";
-import type { Entry } from "@/generated/prisma/client";
+import type { Entry, MediaType } from "@/generated/prisma/client";
+
+export interface MediaInput {
+  url: string;
+  type: MediaType;
+}
 
 export interface CreateEntryInput {
   title: string;
@@ -17,7 +22,7 @@ export interface CreateEntryInput {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
-  images: string[];
+  media: MediaInput[];
 }
 
 export type CreateEntryResult = { success: true; entry: Entry } | { success: false; error: string };
@@ -44,7 +49,9 @@ export async function createEntry(input: CreateEntryInput): Promise<CreateEntryR
     return { success: false, error: error instanceof Error ? error.message : "You must be signed in to do that." };
   }
 
-  const images = (input.images ?? []).map((url) => url.trim()).filter(Boolean);
+  const media = (input.media ?? [])
+    .map((item) => ({ url: item.url.trim(), type: item.type }))
+    .filter((item) => item.url.length > 0);
 
   try {
     const entry = await prisma.$transaction(async (tx) => {
@@ -63,9 +70,15 @@ export async function createEntry(input: CreateEntryInput): Promise<CreateEntryR
         },
       });
 
-      if (images.length > 0) {
-        await tx.entryImage.createMany({
-          data: images.map((url, position) => ({ entryId: created.id, userId, url, position })),
+      if (media.length > 0) {
+        await tx.entryMedia.createMany({
+          data: media.map((item, position) => ({
+            entryId: created.id,
+            userId,
+            url: item.url,
+            type: item.type,
+            position,
+          })),
         });
       }
 

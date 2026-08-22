@@ -15,7 +15,7 @@ export function validateImageFile(
     return { valid: false, error: typeErrorMessage };
   }
   if (file.size > maxBytes) {
-    return { valid: false, error: `Image must be smaller than ${Math.round(maxBytes / (1024 * 1024))}MB.` };
+    return { valid: false, error: `File must be smaller than ${Math.round(maxBytes / (1024 * 1024))}MB.` };
   }
   return { valid: true, extension };
 }

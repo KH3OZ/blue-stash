@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
 import { deleteEntry } from "@/app/actions/delete-entry";
-import { getEntryImages } from "@/app/actions/get-entry-images";
+import { getEntryMedia } from "@/app/actions/get-entry-media";
 import { cn } from "@/lib/utils";
 import { useAddStashModal } from "@/context/add-stash-modal-context";
 import type { Entry } from "@/generated/prisma/client";
@@ -78,9 +78,9 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
   useEffect(() => {
     if (!open || !entryId) return;
     let cancelled = false;
-    getEntryImages(entryId).then((images) => {
+    getEntryMedia(entryId).then((media) => {
       if (!cancelled) {
-        setImageRecord({ entryId, urls: images.map((image) => image.url) });
+        setImageRecord({ entryId, urls: media.map((item) => item.url) });
       }
     });
     return () => {
@@ -90,11 +90,11 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
 
   if (!entry) return null;
 
-  // Multi-image entries use the EntryImage table (fetched above, keyed by
+  // Multi-image entries use the EntryMedia table (fetched above, keyed by
   // entryId to avoid showing a stale entry's images); entries created before
   // multi-image support fall back to the single coverUrl.
-  const entryImageUrls = imageRecord?.entryId === entryId ? imageRecord.urls : [];
-  const displayImageUrls = entryImageUrls.length > 0 ? entryImageUrls : entry.coverUrl ? [entry.coverUrl] : [];
+  const entryMediaUrls = imageRecord?.entryId === entryId ? imageRecord.urls : [];
+  const displayImageUrls = entryMediaUrls.length > 0 ? entryMediaUrls : entry.coverUrl ? [entry.coverUrl] : [];
 
   function openLightbox(index: number) {
     setLightboxIndex(index);

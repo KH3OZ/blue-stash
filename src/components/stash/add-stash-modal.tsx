@@ -2,14 +2,15 @@
 
 import { useEffect, useRef, useState, useTransition, type ChangeEvent, type KeyboardEvent } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { Loader2, Upload, X } from "lucide-react";
+import { Film, Loader2, Music, Upload, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
 import { createEntry } from "@/app/actions/create-entry";
 import { updateEntry } from "@/app/actions/update-entry";
-import { getEntryImages } from "@/app/actions/get-entry-images";
+import { getEntryMedia } from "@/app/actions/get-entry-media";
+import type { MediaInput } from "@/app/actions/create-entry";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { validateImageFile } from "@/lib/storage/validate-image-file";
@@ -52,6 +53,35 @@ const ALLOWED_COVER_TYPES: Record<string, string> = {
 };
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
+const ALLOWED_MEDIA_TYPES: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+  "audio/ogg": "ogg",
+  "audio/mp4": "m4a",
+};
+const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
+const MAX_VIDEO_DURATION_SECONDS = 10;
+
+function getVideoDurationSeconds(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    const objectUrl = URL.createObjectURL(file);
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(video.duration);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read video metadata."));
+    };
+    video.src = objectUrl;
+  });
+}
+
 const SHORT_TAKE_WORD_LIMIT = 20;
 
 function countWords(value: string) {
@@ -91,6 +121,7 @@ interface EntrySnapshot {
   deepReflection: string | null;
   tags: string[];
   additionalImageUrls: string[];
+  additionalAvMedia: MediaInput[];
 }
 
 function snapshotFromEntry(entry: Entry): EntrySnapshot {
@@ -105,6 +136,7 @@ function snapshotFromEntry(entry: Entry): EntrySnapshot {
     deepReflection: entry.deepReflection,
     tags: entry.tags,
     additionalImageUrls: [],
+    additionalAvMedia: [],
   };
 }
 
@@ -118,7 +150,7 @@ export interface AddStashEntry {
   shortTake: string | null;
   deepReflection: string | null;
   tags: string[];
-  images: string[];
+  media: MediaInput[];
 }
 
 interface AddStashModalProps {
@@ -145,10 +177,12 @@ export function AddStashModal({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const imagesFileInputRef = useRef<HTMLInputElement>(null);
+  const avFileInputRef = useRef<HTMLInputElement>(null);
   const { notifyError } = useAddStashModal();
   const [originalSnapshot, setOriginalSnapshot] = useState<EntrySnapshot | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [isUploadingAv, setIsUploadingAv] = useState(false);
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>(initialCategory);
@@ -156,6 +190,7 @@ export function AddStashModal({
   const [rating, setRating] = useState<number | null>(null);
   const [coverUrl, setCoverUrl] = useState("");
   const [additionalImageUrls, setAdditionalImageUrls] = useState<string[]>([]);
+  const [additionalAvMedia, setAdditionalAvMedia] = useState<MediaInput[]>([]);
   const [externalLink, setExternalLink] = useState("");
   const [date, setDate] = useState(todayIso());
   const [tags, setTags] = useState<string[]>([]);
@@ -185,6 +220,7 @@ export function AddStashModal({
         setRating(snapshot.rating);
         setCoverUrl(snapshot.coverUrl ?? "");
         setAdditionalImageUrls([]);
+        setAdditionalAvMedia([]);
         setExternalLink(snapshot.externalLink ?? "");
         setDate(snapshot.date);
         setTags(snapshot.tags);
@@ -197,6 +233,7 @@ export function AddStashModal({
         setRating(null);
         setCoverUrl(initialCoverUrl);
         setAdditionalImageUrls([]);
+        setAdditionalAvMedia([]);
         setExternalLink("");
         setDate(todayIso());
         setTags([]);
@@ -230,22 +267,32 @@ export function AddStashModal({
       tags.length !== original.tags.length ||
       tags.some((tag, i) => tag !== original.tags[i]) ||
       additionalImageUrls.length !== original.additionalImageUrls.length ||
-      additionalImageUrls.some((url, i) => url !== original.additionalImageUrls[i])
+      additionalImageUrls.some((url, i) => url !== original.additionalImageUrls[i]) ||
+      additionalAvMedia.length !== original.additionalAvMedia.length ||
+      additionalAvMedia.some(
+        (item, i) => item.url !== original.additionalAvMedia[i]?.url || item.type !== original.additionalAvMedia[i]?.type
+      )
     );
   }
 
-  // Multi-image entries store their gallery in the EntryImage table; the
+  // Multi-media entries store their gallery in the EntryMedia table; the
   // Entry object passed in as `existingEntry` doesn't carry it, so fetch it
   // separately when opening in edit mode.
   useEffect(() => {
     if (!open || mode !== "edit" || !existingEntry) return;
     let cancelled = false;
-    getEntryImages(existingEntry.id).then((images) => {
+    getEntryMedia(existingEntry.id).then((media) => {
       if (cancelled) return;
-      // Index 0 mirrors coverUrl (see create-entry/update-entry); the rest are "additional".
-      const additional = images.slice(1).map((image) => image.url);
-      setAdditionalImageUrls(additional);
-      setOriginalSnapshot((prev) => (prev ? { ...prev, additionalImageUrls: additional } : prev));
+      const images = media.filter((item) => item.type === "IMAGE");
+      const av = media.filter((item) => item.type !== "IMAGE");
+      // Index 0 of the images mirrors coverUrl (see create-entry/update-entry); the rest are "additional".
+      const additionalImages = images.slice(1).map((item) => item.url);
+      const avMedia: MediaInput[] = av.map((item) => ({ url: item.url, type: item.type }));
+      setAdditionalImageUrls(additionalImages);
+      setAdditionalAvMedia(avMedia);
+      setOriginalSnapshot((prev) =>
+        prev ? { ...prev, additionalImageUrls: additionalImages, additionalAvMedia: avMedia } : prev
+      );
     });
     return () => {
       cancelled = true;
@@ -397,6 +444,78 @@ export function AddStashModal({
     markDirty();
   }
 
+  async function handleAvFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    setIsUploadingAv(true);
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setIsUploadingAv(false);
+      notifyError("You must be signed in to do that.");
+      return;
+    }
+
+    const uploaded: MediaInput[] = [];
+    for (const file of files) {
+      const validation = validateImageFile(
+        file,
+        ALLOWED_MEDIA_TYPES,
+        MAX_MEDIA_BYTES,
+        "Please choose an MP4, WEBM, MOV, MP3, WAV, OGG, or M4A file."
+      );
+      if (!validation.valid) {
+        notifyError(validation.error!);
+        continue;
+      }
+
+      const isVideo = file.type.startsWith("video/");
+      if (isVideo) {
+        try {
+          const duration = await getVideoDurationSeconds(file);
+          if (duration > MAX_VIDEO_DURATION_SECONDS) {
+            notifyError(`Videos must be ${MAX_VIDEO_DURATION_SECONDS} seconds or shorter.`);
+            continue;
+          }
+        } catch {
+          // Couldn't read duration metadata — don't block the upload on it.
+        }
+      }
+
+      const path = `${user.id}/${crypto.randomUUID()}.${validation.extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("stash-media")
+        .upload(path, file, { upsert: false, contentType: file.type });
+
+      if (uploadError) {
+        console.error("Media upload failed", uploadError);
+        notifyError("Something went wrong while uploading one of your files. Please try again.");
+        continue;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("stash-media").getPublicUrl(path);
+      uploaded.push({ url: publicUrl, type: isVideo ? "VIDEO" : "AUDIO" });
+    }
+
+    setIsUploadingAv(false);
+    if (uploaded.length > 0) {
+      setAdditionalAvMedia((prev) => [...prev, ...uploaded]);
+      markDirty();
+    }
+  }
+
+  function removeAdditionalAvMedia(url: string) {
+    setAdditionalAvMedia((prev) => prev.filter((item) => item.url !== url));
+    markDirty();
+  }
+
   const titleError = touchedTitle && title.trim().length === 0 ? "Title is required." : null;
   const dateError = date.trim().length === 0 ? "Date is required." : null;
   const shortTakeWordCount = countWords(shortTake);
@@ -421,7 +540,10 @@ export function AddStashModal({
       shortTake: shortTake.trim() || null,
       deepReflection: deepReflection.trim() || null,
       tags,
-      images: trimmedCoverUrl ? [trimmedCoverUrl, ...additionalImageUrls] : additionalImageUrls,
+      media: [
+        ...(trimmedCoverUrl ? [trimmedCoverUrl] : []),
+        ...additionalImageUrls,
+      ].map((url): MediaInput => ({ url, type: "IMAGE" })).concat(additionalAvMedia),
     };
 
     setSaveError(null);
@@ -667,6 +789,63 @@ export function AddStashModal({
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">Video / Audio (optional)</span>
+              <input
+                ref={avFileInputRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,audio/mpeg,audio/wav,audio/ogg,audio/mp4"
+                multiple
+                hidden
+                onChange={handleAvFileChange}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isUploadingAv}
+                onClick={() => avFileInputRef.current?.click()}
+              >
+                {isUploadingAv ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Uploading&hellip;
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-4" aria-hidden="true" />
+                    Add video/audio
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Videos up to 50MB and 10 seconds long. Audio up to 50MB.</p>
+            {additionalAvMedia.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {additionalAvMedia.map((item) => {
+                  const MediaIcon = item.type === "VIDEO" ? Film : Music;
+                  return (
+                    <div
+                      key={item.url}
+                      className="relative flex size-16 items-center justify-center rounded-lg border border-border bg-foreground/5"
+                    >
+                      <MediaIcon className="size-6 text-foreground/50" aria-hidden="true" />
+                      <button
+                        type="button"
+                        aria-label={item.type === "VIDEO" ? "Remove video" : "Remove audio"}
+                        onClick={() => removeAdditionalAvMedia(item.url)}
+                        className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border-2 border-foreground bg-secondary text-foreground transition-colors hover:border-destructive hover:text-destructive"
+                      >
+                        <X className="size-3" aria-hidden="true" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

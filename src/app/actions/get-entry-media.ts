@@ -2,9 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/supabase/get-current-user";
-import type { EntryImage } from "@/generated/prisma/client";
+import type { EntryMedia } from "@/generated/prisma/client";
 
-export async function getEntryImages(entryId: string): Promise<EntryImage[]> {
+export async function getEntryMedia(entryId: string): Promise<EntryMedia[]> {
   let userId: string;
   try {
     userId = await getCurrentUserId();
@@ -13,12 +13,12 @@ export async function getEntryImages(entryId: string): Promise<EntryImage[]> {
   }
 
   try {
-    return await prisma.entryImage.findMany({
+    return await prisma.entryMedia.findMany({
       where: { entryId, userId },
       orderBy: { position: "asc" },
     });
   } catch (error) {
-    console.error("getEntryImages failed", error);
+    console.error("getEntryMedia failed", error);
     return [];
   }
 }
