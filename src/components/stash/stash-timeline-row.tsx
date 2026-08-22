@@ -71,7 +71,9 @@ export function StashTimelineRow({
         {entry.date ? (
           <>
             <span>{dateFormatter.format(entry.date)}</span>
-            <span className="normal-case opacity-70">{timeFormatter.format(entry.createdAt)}</span>
+            {entry.date.toDateString() === entry.createdAt.toDateString() && (
+              <span className="normal-case opacity-70">{timeFormatter.format(entry.createdAt)}</span>
+            )}
           </>
         ) : (
           "—"

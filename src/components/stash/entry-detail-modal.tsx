@@ -205,8 +205,12 @@ export function EntryDetailModal({ entry, open, onOpenChange }: EntryDetailModal
               {entry.date && (
                 <time dateTime={entry.date.toISOString()}>
                   {dateFormatter.format(entry.date)}
-                  {" · "}
-                  {timeFormatter.format(entry.createdAt)}
+                  {entry.date.toDateString() === entry.createdAt.toDateString() && (
+                    <>
+                      {" · "}
+                      {timeFormatter.format(entry.createdAt)}
+                    </>
+                  )}
                 </time>
               )}
               {entry.rating !== null && (

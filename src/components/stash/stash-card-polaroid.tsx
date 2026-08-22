@@ -159,8 +159,12 @@ export function StashCardPolaroid({
             {entry.date && (
               <time dateTime={entry.date.toISOString()}>
                 {dateFormatter.format(entry.date)}
-                {" · "}
-                {timeFormatter.format(entry.createdAt)}
+                {entry.date.toDateString() === entry.createdAt.toDateString() && (
+                  <>
+                    {" · "}
+                    {timeFormatter.format(entry.createdAt)}
+                  </>
+                )}
               </time>
             )}
           </div>
